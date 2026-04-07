@@ -1,0 +1,50 @@
+{
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ]
+    }
+  ],
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "govease-keshara",
+          "appId": "1:712998131650:android:3b603c0f834ee795dd685b",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "govease-keshara",
+          "appId": "1:712998131650:ios:9c918535914736acdd685b",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "govease-keshara",
+          "configurations": {
+            "android": "1:712998131650:android:3b603c0f834ee795dd685b",
+            "ios": "1:712998131650:ios:9c918535914736acdd685b"
+          }
+        }
+      }
+    }
+  }
+}

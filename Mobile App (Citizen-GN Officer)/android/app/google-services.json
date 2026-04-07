@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "712998131650",
+    "project_id": "govease-keshara",
+    "storage_bucket": "govease-keshara.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:712998131650:android:3b603c0f834ee795dd685b",
+        "android_client_info": {
+          "package_name": "com.govease"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDe50SY2mD3wnKlFehdVyckhN3_HC3MmJs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

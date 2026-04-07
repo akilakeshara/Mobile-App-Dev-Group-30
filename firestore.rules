@@ -1,0 +1,259 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function hasRoleClaim(role) {
+      return isSignedIn() && request.auth.token.role == role;
+    }
+
+    function hasAnyRoleClaim(roles) {
+      return isSignedIn() && request.auth.token.role in roles;
+    }
+
+    function hasCitizenProfile() {
+      return isSignedIn() &&
+          exists(/databases/$(database)/documents/citizens/$(request.auth.uid));
+    }
+
+    function hasOfficerProfile() {
+      return isSignedIn() &&
+          exists(/databases/$(database)/documents/officers/$(request.auth.uid));
+    }
+
+    function hasLegacyUserProfile() {
+      return isSignedIn() &&
+          exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function getCurrentUser() {
+      return hasCitizenProfile()
+          ? get(/databases/$(database)/documents/citizens/$(request.auth.uid)).data
+          : hasOfficerProfile()
+              ? get(/databases/$(database)/documents/officers/$(request.auth.uid)).data
+              : hasLegacyUserProfile()
+                  ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data
+                  : null;
+    }
+
+    function hasAdminProfile() {
+      return isSignedIn() &&
+          exists(/databases/$(database)/documents/ds_admins/$(request.auth.uid));
+    }
+
+    function isAdmin() {
+      return hasRoleClaim('admin') || hasAdminProfile();
+    }
+
+    function isOfficer() {
+      return hasAnyRoleClaim(['officer', 'admin']);
+    }
+
+    function isOfficerOrAdmin() {
+      return isOfficer() || isAdmin();
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function officerMatchesAppointment(appointmentData) {
+      return isOfficer();
+    }
+
+    function isValidCitizenGnAppointmentCreate(data) {
+      return isSignedIn() &&
+          data.userId == request.auth.uid &&
+          data.status == 'Requested';
+    }
+
+    function canOfficerReadAppointment(appointmentData) {
+      return isAdmin() || (isOfficer() && officerMatchesAppointment(appointmentData));
+    }
+
+    function isValidOfficerStatusTransition(currentStatus, nextStatus) {
+      return (currentStatus == 'Requested' &&
+              (nextStatus == 'Approved' ||
+               nextStatus == 'Declined' ||
+               nextStatus == 'Rescheduled')) ||
+          ((currentStatus == 'Approved' || currentStatus == 'Rescheduled') &&
+              nextStatus == 'Completed');
+    }
+
+    function citizenCancelOnlyAllowedChanges() {
+      return request.resource.data.diff(resource.data).changedKeys().hasOnly([
+        'status',
+        'updatedAt',
+      ]);
+    }
+
+    function isValidCitizenCancelTransition(currentStatus, nextStatus) {
+      return nextStatus == 'Cancelled' &&
+          (currentStatus == 'Requested' ||
+              currentStatus == 'Approved' ||
+              currentStatus == 'Rescheduled');
+    }
+
+    function officerOnlyAllowedChanges() {
+      return request.resource.data.diff(resource.data).changedKeys().hasOnly([
+        'status',
+        'officerNotes',
+        'scheduledDate',
+        'updatedAt',
+        'responseAt',
+        'assignedOfficerId',
+        'assignedOfficerName',
+        'lastActionBy',
+        'lastActionReason',
+        'lastActionSource',
+        'lastActionSessionId',
+        'lastActionDeviceId',
+        'lastActionAt',
+      ]);
+    }
+
+    function profileSensitiveFields() {
+      return [
+        'role',
+        'officerPassword',
+        'password',
+        'officerId',
+        'officerIdNormalized',
+      ];
+    }
+
+    function profileSensitiveFieldsUnchanged() {
+      return !request.resource.data
+          .diff(resource.data)
+          .changedKeys()
+          .hasAny(profileSensitiveFields());
+    }
+
+    // Users, Citizens, Officers collections
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isOfficerOrAdmin();
+      allow create: if isOwner(userId) &&
+          request.resource.data.role == 'citizen';
+      allow update: if (isOwner(userId) || isOfficerOrAdmin()) &&
+          profileSensitiveFieldsUnchanged();
+      allow delete: if isOfficerOrAdmin();
+    }
+
+    match /citizens/{userId} {
+      allow read: if isOwner(userId) || isOfficerOrAdmin();
+      allow create: if isOwner(userId) &&
+          request.resource.data.role == 'citizen';
+      allow update: if (isOwner(userId) || isOfficerOrAdmin()) &&
+          profileSensitiveFieldsUnchanged();
+      allow delete: if isOfficerOrAdmin();
+    }
+
+    match /officers/{userId} {
+      allow read: if isOwner(userId) || isOfficerOrAdmin();
+      allow create: if (isAdmin() || isOwner(userId)) &&
+          (request.resource.data.role == 'officer' ||
+              request.resource.data.role == 'admin');
+      allow update: if (isOwner(userId) || isOfficerOrAdmin()) &&
+          profileSensitiveFieldsUnchanged();
+      allow delete: if isOfficerOrAdmin();
+    }
+
+    // Divisional Secretariat Admins
+    match /ds_admins/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isSignedIn() && isOwner(userId); // Allow initial creation by self
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // App config - authenticated read, admin write
+    match /config/{document=**} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Applications - citizens own theirs, officers/admins see all
+    match /applications/{document=**} {
+      allow read: if isOwner(resource.data.userId) || isOfficerOrAdmin();
+      allow create: if isSignedIn();
+      allow update: if isOwner(resource.data.userId) || isOfficerOrAdmin();
+      allow delete: if isOfficerOrAdmin();
+    }
+
+    // Complaints - citizens own theirs, officers/admins see all
+    match /complaints/{document=**} {
+      allow read: if isOwner(resource.data.userId) || isOfficerOrAdmin();
+      allow create: if isSignedIn();
+      allow update: if isOwner(resource.data.userId) || isOfficerOrAdmin();
+      allow delete: if isOfficerOrAdmin();
+    }
+
+    // GN appointments
+    match /gn_appointments/{appointmentId} {
+      allow read: if isOwner(resource.data.userId) ||
+          canOfficerReadAppointment(resource.data);
+
+      allow create: if isSignedIn() &&
+          isValidCitizenGnAppointmentCreate(request.resource.data);
+
+      // Citizen can only cancel their own appointment.
+      allow update: if (
+            isOwner(resource.data.userId) &&
+            request.resource.data.userId == resource.data.userId &&
+            isValidCitizenCancelTransition(
+              resource.data.status,
+              request.resource.data.status
+            ) &&
+            citizenCancelOnlyAllowedChanges()
+          ) || (
+            canOfficerReadAppointment(resource.data) &&
+            request.resource.data.userId == resource.data.userId &&
+            officerOnlyAllowedChanges() &&
+            isValidOfficerStatusTransition(
+              resource.data.status,
+              request.resource.data.status
+            )
+          );
+
+      allow delete: if false;
+    }
+
+    // Alerts - officers/admins only
+    match /alerts/{document=**} {
+      allow read: if isOfficerOrAdmin();
+      allow create: if isOfficerOrAdmin();
+      allow update: if isOfficerOrAdmin();
+      allow delete: if isOfficerOrAdmin();
+    }
+
+    // Immutable officer action audit trail.
+    // Writes happen via privileged backend (Cloud Functions/Admin SDK).
+    match /action_logs/{logId} {
+      allow read: if isOfficerOrAdmin();
+      allow create, update, delete: if false;
+    }
+
+    // Notifications - user can read own notifications, officers/admins can manage
+    match /notifications/{notificationId} {
+      allow read: if isOwner(resource.data.userId) || isOfficerOrAdmin();
+      allow create: if (isSignedIn() && request.resource.data.userId == request.auth.uid) ||
+          isOfficerOrAdmin();
+      allow update: if isOwner(resource.data.userId) || isOfficerOrAdmin();
+      allow delete: if isOfficerOrAdmin();
+    }
+
+    // Payments - users can read/create their own
+    match /payments/{paymentId} {
+      allow read: if isOwner(resource.data.userId) || isOfficerOrAdmin();
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // Default deny all other paths
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

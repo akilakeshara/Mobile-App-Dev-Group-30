@@ -1,0 +1,60 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOfficerOrAdmin() {
+      return isSignedIn() &&
+          (request.auth.token.role == 'officer' || request.auth.token.role == 'admin');
+    }
+
+    function isCertificateArtifact(document) {
+      return document.matches('certificate_.*\\.pdf');
+    }
+
+    match /applications/{userId}/{applicationId}/{document} {
+      allow read: if isSignedIn() &&
+                  (request.auth.uid == userId || isOfficerOrAdmin());
+      
+      allow write: if isSignedIn() &&
+                   request.resource.size < 10 * 1024 * 1024 && (
+                     (
+                       request.auth.uid == userId &&
+                       (request.resource.contentType.matches('image/.*') ||
+                           request.resource.contentType == 'application/pdf')
+                     ) || (
+                       isOfficerOrAdmin() &&
+                       request.resource.contentType == 'application/pdf' &&
+                       isCertificateArtifact(document) &&
+                       request.resource.metadata.uploadedBy == request.auth.uid &&
+                       request.resource.metadata.ownerUserId == userId
+                     )
+                   );
+      
+      allow delete: if isSignedIn() &&
+                    (
+                      request.auth.uid == userId ||
+                      (isOfficerOrAdmin() && isCertificateArtifact(document))
+                    );
+    }
+
+    match /profile_photos/{userId}/{fileName} {
+      allow read: if isSignedIn() &&
+                  (request.auth.uid == userId || isOfficerOrAdmin());
+
+      allow write: if isSignedIn() &&
+                   request.auth.uid == userId
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+
+      allow delete: if isSignedIn() &&
+            request.auth.uid == userId;
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

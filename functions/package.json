@@ -1,0 +1,28 @@
+{
+  "name": "functions",
+  "description": "Cloud Functions for GovEase",
+  "scripts": {
+    "serve": "firebase emulators:start --only functions",
+    "shell": "firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log",
+    "migrate:legacy-users": "node migrate_legacy_users.js",
+    "migrate:legacy-users:dry-run": "node migrate_legacy_users.js --dry-run",
+    "seed:admin-hierarchy:check": "node seed_administrative_hierarchy.js https://raw.githubusercontent.com/dinushchathurya/srilankan-grama-niladhari-divisions/master/src/Division.php --dry-run --strict",
+    "seed:admin-hierarchy": "node seed_administrative_hierarchy.js https://raw.githubusercontent.com/dinushchathurya/srilankan-grama-niladhari-divisions/master/src/Division.php"
+  },
+  "engines": {
+    "node": "22"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^12.0.0",
+    "firebase-functions": "^5.0.0",
+    "axios": "^1.6.0"
+  },
+  "devDependencies": {
+    "firebase-functions-test": "^3.1.0"
+  },
+  "private": true
+}
