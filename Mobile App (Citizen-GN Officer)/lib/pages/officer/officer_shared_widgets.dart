@@ -33,39 +33,43 @@ class OfficerSummaryCard extends StatelessWidget {
         ],
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: (color ?? AppColors.primary).withAlpha(15),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Icon(icon, color: color ?? AppColors.primary, size: 28),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: (color ?? AppColors.primary).withAlpha(15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: color ?? AppColors.primary, size: 22),
+              ),
+              Expanded(
+                child: Text(
                   value,
+                  textAlign: TextAlign.right,
                   style: GoogleFonts.outfit(
-                    fontSize: 28,
+                    fontSize: 22,
                     fontWeight: FontWeight.w800,
                     color: AppColors.foreground,
                   ),
                 ),
-                Text(
-                  label,
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.mutedForeground,
-                  ),
-                ),
-              ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            label,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.mutedForeground,
+              height: 1.2,
             ),
           ),
         ],

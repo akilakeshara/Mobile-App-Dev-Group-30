@@ -12,6 +12,13 @@ import 'package:animate_do/animate_do.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../widgets/gradient_page_app_bar.dart';
 
+String _getGreeting() {
+  var hour = DateTime.now().hour;
+  if (hour < 12) return 'Good Morning';
+  if (hour < 17) return 'Good Afternoon';
+  return 'Good Evening';
+}
+
 class OfficerDashboardPage extends StatelessWidget {
   const OfficerDashboardPage({super.key});
 
@@ -109,184 +116,189 @@ class OfficerDashboardPage extends StatelessWidget {
             debugPrint("Officer Dashboard Scope: $actualGnDivision");
           }
 
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+          return Stack(
             children: [
-              FadeInDown(
-                duration: const Duration(milliseconds: 500),
+              // Pro-level background top splash
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 220,
                 child: Container(
-                  padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [AppColors.primary, AppColors.primary.withAlpha(200)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary.withAlpha(50),
-                        blurRadius: 15,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        'Good Morning, $officerName',
-                        style: GoogleFonts.outfit(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withAlpha(40),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.location_on_rounded,
-                              color: Colors.white,
-                              size: 14,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'GN Div: $officerDivision',
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(40),
+                      bottomRight: Radius.circular(40),
+                    ),
                   ),
                 ),
               ),
-          const SizedBox(height: 24),
+              // Main Scrollable Content
+              ListView(
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 30),
+                physics: const BouncingScrollPhysics(),
+                children: [
+              FadeInDown(
+                duration: const Duration(milliseconds: 600),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${_getGreeting()},',
+                      style: GoogleFonts.outfit(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white.withAlpha(200),
+                      ),
+                    ),
+                    Text(
+                      officerName,
+                      style: GoogleFonts.outfit(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withAlpha(40),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.white.withAlpha(50)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.location_on_rounded, color: Colors.white, size: 16),
+                          const SizedBox(width: 6),
+                          Text(
+                            'GN Base: $officerDivision',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 30),
           FadeInUp(
             duration: const Duration(milliseconds: 600),
-            child: GridView.count(
-              crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 1.2,
-              physics: const NeverScrollableScrollPhysics(),
-              shrinkWrap: true,
+            child: Column(
               children: [
-                StreamBuilder<List<Application>>(
-                  stream: firestoreService.getAllApplications(gnDivision: actualGnDivision),
-                  builder: (context, snapshot) {
-                    int pendingCount = 0;
-                    if (snapshot.hasData) {
-                      pendingCount = snapshot.data!
-                          .where(
-                            (a) =>
-                                a.status == 'Submitted' ||
-                                a.status == 'Processing',
-                          )
-                          .length;
-                    }
-                    return OfficerSummaryCard(
-                      label: 'Pending Applications',
-                      value: pendingCount.toString(),
-                      icon: Icons.description,
-                    );
-                  },
+                Row(
+                  children: [
+                    Expanded(
+                      child: StreamBuilder<List<Application>>(
+                        stream: firestoreService.getAllApplications(gnDivision: actualGnDivision),
+                        builder: (context, snapshot) {
+                          int pendingCount = 0;
+                          if (snapshot.hasData) {
+                            pendingCount = snapshot.data!
+                                .where((a) => a.status == 'Submitted' || a.status == 'Processing')
+                                .length;
+                          }
+                          return OfficerSummaryCard(
+                            label: 'Pending Apps',
+                            value: pendingCount.toString(),
+                            icon: Icons.description,
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: StreamBuilder<List<Application>>(
+                        stream: firestoreService.getAllApplications(gnDivision: actualGnDivision),
+                        builder: (context, snapshot) {
+                          int approvedToday = 0;
+                          if (snapshot.hasData) {
+                            final now = DateTime.now();
+                            approvedToday = snapshot.data!
+                                .where((a) => a.status == 'Approved' && a.createdAt.year == now.year && a.createdAt.month == now.month && a.createdAt.day == now.day)
+                                .length;
+                          }
+                          return OfficerSummaryCard(
+                            label: 'Approved Today',
+                            value: approvedToday.toString(),
+                            icon: Icons.check_circle,
+                            color: AppColors.success,
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
-                StreamBuilder<List<Application>>(
-                  stream: firestoreService.getAllApplications(gnDivision: actualGnDivision),
-                  builder: (context, snapshot) {
-                    int approvedToday = 0;
-                    if (snapshot.hasData) {
-                      final now = DateTime.now();
-                      approvedToday = snapshot.data!
-                          .where(
-                            (a) =>
-                                a.status == 'Approved' &&
-                                a.createdAt.year == now.year &&
-                                a.createdAt.month == now.month &&
-                                a.createdAt.day == now.day,
-                          )
-                          .length;
-                    }
-                    return OfficerSummaryCard(
-                      label: 'Approved Today',
-                      value: approvedToday.toString(),
-                      icon: Icons.check_circle,
-                      color: AppColors.success,
-                    );
-                  },
-                ),
-                StreamBuilder<List<Complaint>>(
-                  stream: firestoreService.getAllComplaints(gnDivision: actualGnDivision),
-                  builder: (context, snapshot) {
-                    int newCount = 0;
-                    if (snapshot.hasData) {
-                      newCount = snapshot.data!
-                          .where((c) => c.status == 'Open')
-                          .length;
-                    }
-                    return OfficerSummaryCard(
-                      label: 'New Complaints',
-                      value: newCount.toString(),
-                      icon: Icons.warning_rounded,
-                      color: AppColors.warning,
-                    );
-                  },
-                ),
-                StreamBuilder<List<Complaint>>(
-                  stream: firestoreService.getAllComplaints(gnDivision: actualGnDivision),
-                  builder: (context, snapshot) {
-                    int resolvedCount = 0;
-                    if (snapshot.hasData) {
-                      resolvedCount = snapshot.data!
-                          .where(
-                            (c) =>
-                                c.status == 'Closed' || c.status == 'Resolved',
-                          )
-                          .length;
-                    }
-                    return OfficerSummaryCard(
-                      label: 'Resolved Complaints',
-                      value: resolvedCount.toString(),
-                      icon: Icons.done_all_rounded,
-                      color: AppColors.success,
-                    );
-                  },
-                ),
-                StreamBuilder<List<UserModel>>(
-                  stream: firestoreService.getCitizensStream(),
-                  builder: (context, snapshot) {
-                    int count = 0;
-                    if (snapshot.hasData && actualGnDivision.isNotEmpty) {
-                      // Filter by division locally due to encryption
-                      count = snapshot.data!.where((u) => 
-                        u.gramasewaWasama == actualGnDivision || 
-                        u.division == actualGnDivision
-                      ).length;
-                    } else if (snapshot.hasData) {
-                       count = snapshot.data!.length;
-                    }
-                    return OfficerSummaryCard(
-                      label: 'Total Citizens',
-                      value: count.toString(),
-                      icon: Icons.people_outline_rounded,
-                      color: const Color(0xFF6366F1),
-                    );
-                  },
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: StreamBuilder<List<UserModel>>(
+                        stream: firestoreService.getCitizensStream(),
+                        builder: (context, snapshot) {
+                          int count = 0;
+                          if (snapshot.hasData && actualGnDivision.isNotEmpty) {
+                            count = snapshot.data!.where((u) => u.gramasewaWasama == actualGnDivision || u.division == actualGnDivision).length;
+                          } else if (snapshot.hasData) {
+                            count = snapshot.data!.length;
+                          }
+                          return OfficerSummaryCard(
+                            label: 'Citizens',
+                            value: count.toString(),
+                            icon: Icons.people_outline_rounded,
+                            color: const Color(0xFF6366F1),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: StreamBuilder<List<Complaint>>(
+                        stream: firestoreService.getAllComplaints(gnDivision: actualGnDivision),
+                        builder: (context, snapshot) {
+                          int newCount = 0;
+                          if (snapshot.hasData) {
+                            newCount = snapshot.data!.where((c) => c.status == 'Open').length;
+                          }
+                          return OfficerSummaryCard(
+                            label: 'New Issues',
+                            value: newCount.toString(),
+                            icon: Icons.warning_rounded,
+                            color: AppColors.warning,
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: StreamBuilder<List<Complaint>>(
+                        stream: firestoreService.getAllComplaints(gnDivision: actualGnDivision),
+                        builder: (context, snapshot) {
+                          int resolvedCount = 0;
+                          if (snapshot.hasData) {
+                            resolvedCount = snapshot.data!.where((c) => c.status == 'Closed' || c.status == 'Resolved').length;
+                          }
+                          return OfficerSummaryCard(
+                            label: 'Resolved',
+                            value: resolvedCount.toString(),
+                            icon: Icons.done_all_rounded,
+                            color: AppColors.success,
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -351,6 +363,7 @@ class OfficerDashboardPage extends StatelessWidget {
                             '${avgHours.toStringAsFixed(1)} Hours',
                             Icons.timer_rounded,
                             AppColors.primary,
+                            avgHours > 48 ? 1.0 : (avgHours / 48.0),
                           ),
                           const Divider(height: 24),
                           _buildKPIRow(
@@ -358,24 +371,7 @@ class OfficerDashboardPage extends StatelessWidget {
                             '${slaPercent.toStringAsFixed(1)}%',
                             Icons.verified_user_rounded,
                             AppColors.success,
-                          ),
-                          const Divider(height: 24),
-                          StreamBuilder<List<Complaint>>(
-                            stream: firestoreService.getAllComplaints(gnDivision: actualGnDivision),
-                            builder: (context, cSnapshot) {
-                              final complaints = cSnapshot.data ?? [];
-                              final withRating = complaints.where((c) => c.status == 'Closed').length;
-                              // Mocking rating for now as it's not in the model, but making it tied to resolved count
-                              double rating = 4.5 + (withRating > 0 ? 0.3 : 0);
-                              if (rating > 5.0) rating = 5.0;
-
-                              return _buildKPIRow(
-                                'Citizen Rating',
-                                '${rating.toStringAsFixed(1)} / 5.0',
-                                Icons.star_rounded,
-                                AppColors.warning,
-                              );
-                            }
+                            slaPercent / 100.0,
                           ),
                         ],
                       );
@@ -462,7 +458,9 @@ class OfficerDashboardPage extends StatelessWidget {
             ),
             ),
           ],
-        );
+        ),
+      ],
+    );
       },
     ),
   );
@@ -664,33 +662,49 @@ class OfficerDashboardPage extends StatelessWidget {
     );
   }
 
-  Widget _buildKPIRow(String label, String value, IconData icon, Color color) {
+  Widget _buildKPIRow(String label, String value, IconData icon, Color color, double progress) {
     return Row(
       children: [
         Container(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: color.withAlpha(20),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
           ),
-          child: Icon(icon, color: color, size: 20),
+          child: Icon(icon, color: color, size: 22),
         ),
         const SizedBox(width: 16),
         Expanded(
-          child: Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: AppColors.mutedForeground,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.mutedForeground,
+                ),
+              ),
+              const SizedBox(height: 6),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: LinearProgressIndicator(
+                  value: progress.clamp(0.0, 1.0),
+                  backgroundColor: AppColors.border.withAlpha(100),
+                  valueColor: AlwaysStoppedAnimation<Color>(color),
+                  minHeight: 6,
+                ),
+              )
+            ],
           ),
         ),
+        const SizedBox(width: 16),
         Text(
           value,
           style: GoogleFonts.outfit(
             fontSize: 16,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w800,
             color: AppColors.foreground,
           ),
         ),
