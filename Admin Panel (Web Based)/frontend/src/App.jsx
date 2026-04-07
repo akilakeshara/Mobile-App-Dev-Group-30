@@ -16,6 +16,7 @@ import WasteSchedule from './WasteSchedule';
 import EscalatedComplaints from './EscalatedComplaints';
 import SystemSettings from './SystemSettings';
 import ServiceApplications from './ServiceApplications';
+import Payments from './Payments';
 
 import { auth, db } from './firebase';
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth';
@@ -130,6 +131,7 @@ const Layout = () => {
       items: [
         { path: '/civil', label: t('Civil Registrations'), icon: <FileSignature size={18} /> },
         { path: '/applications', label: t('Service Applications'), icon: <FileText size={18} /> },
+        { path: '/payments', label: t('Payments Hub'), icon: <Coins size={18} /> },
         { path: '/waste', label: t('Waste Schedule'), icon: <Truck size={18} /> },
         { path: '/escalations', label: t('Escalated Complaints'), icon: <AlertOctagon size={18} /> },
       ]
@@ -398,6 +400,7 @@ const Layout = () => {
               <Route path="/" element={<Dashboard adminProfile={adminProfile} />} />
               <Route path="/civil" element={<CivilRegistrations adminProfile={adminProfile} />} />
               <Route path="/applications" element={<ServiceApplications adminProfile={adminProfile} />} />
+              <Route path="/payments" element={<Payments adminProfile={adminProfile} />} />
               <Route path="/waste" element={<WasteSchedule adminProfile={adminProfile} />} />
               <Route path="/escalations" element={<EscalatedComplaints adminProfile={adminProfile} />} />
               <Route path="/officers" element={<Officers adminProfile={adminProfile} />} />
