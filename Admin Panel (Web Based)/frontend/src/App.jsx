@@ -160,30 +160,216 @@ const Layout = () => {
 
   if (!user) {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-color)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="card glass" style={{ width: '100%', maxWidth: '400px', padding: '2.5rem' }}>
-          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <div style={{ display: 'inline-flex', padding: '1rem', backgroundColor: 'rgba(10, 102, 194, 0.1)', color: 'var(--primary)', borderRadius: '50%', marginBottom: '1rem' }}>
-              <Lock size={32} />
-            </div>
-            <h2 style={{ color: 'var(--text-main)', fontSize: '1.5rem', marginBottom: '0.5rem' }}>Admin Portal Login</h2>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>GovEase Divisional Secretariat</p>
+      <div style={{ 
+        minHeight: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        backgroundColor: '#F1F5F9',
+        position: 'relative',
+        overflow: 'hidden',
+        padding: '2rem'
+      }}>
+        {/* Animated Background Orbs */}
+        <div style={{ position: 'absolute', inset: 0, opacity: 0.8, pointerEvents: 'none', zIndex: 0 }}>
+          <motion.div
+            animate={{ x: [0, 150, 0], y: [0, -100, 0], scale: [1, 1.2, 1] }}
+            transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+            style={{ position: 'absolute', top: '10%', left: '15%', width: '50vw', height: '50vw', background: 'radial-gradient(circle, rgba(10,102,194,0.15) 0%, transparent 60%)', borderRadius: '50%', filter: 'blur(60px)' }}
+          />
+          <motion.div
+            animate={{ x: [0, -200, 0], y: [0, 150, 0], scale: [1, 1.3, 1] }}
+            transition={{ duration: 30, repeat: Infinity, ease: "easeInOut" }}
+            style={{ position: 'absolute', bottom: '-10%', right: '5%', width: '60vw', height: '60vw', background: 'radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 60%)', borderRadius: '50%', filter: 'blur(60px)' }}
+          />
+          <motion.div
+            animate={{ x: [0, 100, 0], y: [0, 200, 0] }}
+            transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
+            style={{ position: 'absolute', top: '30%', right: '25%', width: '30vw', height: '30vw', background: 'radial-gradient(circle, rgba(20,184,166,0.1) 0%, transparent 60%)', borderRadius: '50%', filter: 'blur(50px)' }}
+          />
+        </div>
+
+        {/* Floating Glass Bento Box */}
+        <motion.div 
+          initial={{ opacity: 0, y: 40, scale: 0.97 }} 
+          animate={{ opacity: 1, y: 0, scale: 1 }} 
+          transition={{ duration: 0.8, type: 'spring', damping: 25, stiffness: 120 }}
+          style={{
+            zIndex: 1,
+            display: 'flex',
+            flexDirection: 'row',
+            width: '100%',
+            maxWidth: '1100px',
+            minHeight: '650px',
+            background: 'rgba(255, 255, 255, 0.7)',
+            backdropFilter: 'blur(25px)',
+            WebkitBackdropFilter: 'blur(25px)',
+            borderRadius: '32px',
+            overflow: 'hidden',
+            boxShadow: '0 25px 50px -12px rgba(10, 102, 194, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.8) inset',
+          }}
+        >
+          {/* Left Side: Dynamic Branding pane */}
+          <div className="hide-on-mobile" style={{ 
+            flex: '1.2', 
+            position: 'relative',
+            padding: '4rem',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            background: 'linear-gradient(135deg, rgba(10, 102, 194, 0.95) 0%, rgba(0, 65, 130, 0.98) 100%)',
+            overflow: 'hidden',
+            color: 'white'
+          }}>
+            {/* Inner decorative grid and shapes */}
+            <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)', backgroundSize: '40px 40px', opacity: 0.3 }} />
+            
+            <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3, duration: 0.8, type: 'spring' }}>
+              <div style={{ display: 'inline-flex', padding: '14px', background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '20px', marginBottom: '2rem', boxShadow: '0 8px 32px rgba(0,0,0,0.1)' }}>
+                <ShieldCheck size={38} color="#fff" strokeWidth={1.5} />
+              </div>
+              <h1 style={{ fontSize: '3.8rem', fontWeight: 800, lineHeight: 1.05, letterSpacing: '-1.5px', marginBottom: '1.5rem', textShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                Divisional<br/>Secretariat<br/><span style={{ color: '#93C5FD' }}>Intelligence.</span>
+              </h1>
+              <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '1.15rem', maxWidth: '380px', lineHeight: 1.6, fontWeight: 400 }}>
+                Centralized administrative portal for Government Officials. Secure, real-time, and built for national scale.
+              </p>
+            </motion.div>
+
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Lock size={14} />
+              <span>State Level 256-bit Encryption • v2.4.0</span>
+            </motion.div>
           </div>
-          {authError && <div style={{ padding: '0.75rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.85rem', textAlign: 'center' }}>{authError}</div>}
-          <form onSubmit={handleAuthSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Admin Email</label>
-              <input type="email" required className="input-field" value={email} onChange={e => setEmail(e.target.value)} />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Password</label>
-              <input type="password" required className="input-field" value={password} onChange={e => setPassword(e.target.value)} />
-            </div>
-            <button disabled={isSubmitting} type="submit" className="btn-primary" style={{ marginTop: '0.5rem', width: '100%', opacity: isSubmitting ? 0.7 : 1 }}>
-              {isSubmitting ? 'Authenticating...' : 'Secure Sign In'}
-            </button>
-          </form>
+
+          {/* Right Side: Pristine Form pane */}
+          <div style={{ 
+            flex: '1', 
+            padding: '4rem', 
+            display: 'flex', 
+            flexDirection: 'column', 
+            justifyContent: 'center',
+            position: 'relative'
+          }}>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.6 }}>
+              <div className="show-on-mobile" style={{ marginBottom: '2rem' }}>
+                <div style={{ display: 'inline-flex', padding: '12px', background: 'var(--primary-light)', color: 'var(--primary)', borderRadius: '16px' }}>
+                  <ShieldCheck size={32} />
+                </div>
+              </div>
+
+              <h2 style={{ color: 'var(--text-main)', fontSize: '2.2rem', fontWeight: 800, letterSpacing: '-1px', marginBottom: '0.5rem' }}>
+                Welcome back
+              </h2>
+              <p style={{ color: 'var(--text-muted)', fontSize: '1rem', marginBottom: '3rem' }}>
+                Sign in to your administrative dashboard.
+              </p>
+
+              <form onSubmit={handleAuthSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <AnimatePresence>
+                  {authError && (
+                    <motion.div initial={{ opacity: 0, height: 0, y: -10 }} animate={{ opacity: 1, height: 'auto', y: 0 }} exit={{ opacity: 0, height: 0 }}>
+                      <div style={{ padding: '1rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', borderLeft: '4px solid #EF4444', color: '#B91C1C', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <AlertOctagon size={18} />
+                        {authError}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                
+                <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 }}>
+                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-main)', fontWeight: 700, marginBottom: '0.6rem' }}>Gov Email</label>
+                  <div style={{ position: 'relative' }}>
+                    <div style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
+                      <UserCheck size={20} />
+                    </div>
+                    <input 
+                      type="email" 
+                      required 
+                      placeholder="admin@ds.gov.lk"
+                      style={{ 
+                        width: '100%', padding: '0 1rem 0 3rem', height: '54px', fontSize: '1rem', 
+                        backgroundColor: '#F8FAFC', border: '2px solid transparent', borderRadius: '16px', 
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', outline: 'none',
+                        color: 'var(--text-main)', fontWeight: 500
+                      }}
+                      value={email} 
+                      onChange={e => setEmail(e.target.value)} 
+                      onFocus={e => { e.target.style.backgroundColor = '#fff'; e.target.style.borderColor = 'var(--primary)'; e.target.style.boxShadow = '0 0 0 5px rgba(10,102,194,0.1)'; }}
+                      onBlur={e => { e.target.style.backgroundColor = '#F8FAFC'; e.target.style.borderColor = 'transparent'; e.target.style.boxShadow = 'none'; }}
+                    />
+                  </div>
+                </motion.div>
+
+                <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.6 }}>
+                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-main)', fontWeight: 700, marginBottom: '0.6rem' }}>Passcode</label>
+                  <div style={{ position: 'relative' }}>
+                    <div style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
+                      <Lock size={20} />
+                    </div>
+                    <input 
+                      type="password" 
+                      required 
+                      placeholder="••••••••"
+                      style={{ 
+                        width: '100%', padding: '0 1rem 0 3rem', height: '54px', fontSize: '1.2rem', letterSpacing: '2px',
+                        backgroundColor: '#F8FAFC', border: '2px solid transparent', borderRadius: '16px', 
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', outline: 'none',
+                        color: 'var(--text-main)', fontWeight: 700
+                      }}
+                      value={password} 
+                      onChange={e => setPassword(e.target.value)} 
+                      onFocus={e => { e.target.style.backgroundColor = '#fff'; e.target.style.borderColor = 'var(--primary)'; e.target.style.boxShadow = '0 0 0 5px rgba(10,102,194,0.1)'; }}
+                      onBlur={e => { e.target.style.backgroundColor = '#F8FAFC'; e.target.style.borderColor = 'transparent'; e.target.style.boxShadow = 'none'; }}
+                    />
+                  </div>
+                </motion.div>
+
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}>
+                  <button 
+                    disabled={isSubmitting} 
+                    type="submit" 
+                    style={{ 
+                      marginTop: '1rem', 
+                      height: '56px', 
+                      width: '100%', 
+                      background: 'linear-gradient(135deg, var(--primary) 0%, #084c94 100%)', 
+                      color: 'white', 
+                      borderRadius: '16px', 
+                      fontSize: '1rem', 
+                      fontWeight: 700, 
+                      border: 'none', 
+                      cursor: isSubmitting ? 'wait' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.75rem',
+                      boxShadow: '0 10px 25px -5px rgba(10, 102, 194, 0.4)',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      opacity: isSubmitting ? 0.8 : 1,
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}
+                    onMouseOver={e => !isSubmitting && (e.currentTarget.style.transform = 'translateY(-3px)', e.currentTarget.style.boxShadow = '0 15px 30px -5px rgba(10, 102, 194, 0.5)')}
+                    onMouseOut={e => !isSubmitting && (e.currentTarget.style.transform = 'translateY(0)', e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(10, 102, 194, 0.4)')}
+                  >
+                    {isSubmitting ? (
+                      <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
+                        <Lock size={20} />
+                      </motion.div>
+                    ) : (
+                      <>
+                        Secure Sign In
+                        <ChevronRight size={20} />
+                      </>
+                    )}
+                  </button>
+                </motion.div>
+              </form>
+            </motion.div>
+          </div>
         </motion.div>
+
       </div>
     );
   }
