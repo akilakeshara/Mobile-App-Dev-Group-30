@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FileText, Search, ShieldCheck, CheckCircle2, XCircle, Clock, Eye, AlertCircle, RefreshCw, Layers, CheckCircle, X, ExternalLink } from 'lucide-react';
 import { db } from './firebase';
@@ -328,13 +329,14 @@ export default function ServiceApplications({ adminProfile }) {
         </div>
       </div>
 
-      <AnimatePresence>
-        {selectedApp && (
-          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 100, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '2rem' }}>
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              style={{ background: 'white', borderRadius: '24px', width: '100%', maxWidth: '800px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}
-            >
+      {createPortal(
+        <AnimatePresence>
+          {selectedApp && (
+            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 9999, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '2rem' }}>
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                style={{ background: 'white', borderRadius: '24px', width: '100%', maxWidth: '800px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}
+              >
               <div style={{ padding: '1.5rem 2rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--surface)' }}>
                 <div>
                   <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>{selectedApp.type}</h2>
@@ -448,16 +450,18 @@ export default function ServiceApplications({ adminProfile }) {
                     </button>
                   ) : null}
                   {(selectedApp.status === 'Completed' || selectedApp.status === 'Approved' || selectedApp.status === 'Declined') && (
-                    <button onClick={() => handleDecision(selectedApp.id, 'Submitted')} style={{ padding: '0.8rem 1.5rem', borderRadius: '50px', background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-main)', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}>
-                      Re-open Application
-                    </button>
+                    <div style={{ padding: '0.8rem 1.5rem', borderRadius: '50px', background: 'rgba(156, 163, 175, 0.1)', color: 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <CheckCircle size={18} /> Request is closed
+                    </div>
                   )}
                 </div>
               </div>
             </motion.div>
           </div>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </motion.div>
   );
 }
