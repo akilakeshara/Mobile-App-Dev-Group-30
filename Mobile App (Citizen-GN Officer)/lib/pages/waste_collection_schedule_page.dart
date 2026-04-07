@@ -418,7 +418,7 @@ class _WasteCollectionSchedulePageState
   Widget _buildEntryCard(Map<String, dynamic> entry, int index) {
     final day = (entry['day'] ?? '').toString().trim();
     final time = (entry['time'] ?? '').toString().trim();
-    final route = (entry['route'] ?? '').toString().trim();
+
 
     return Container(
       width: double.infinity,
@@ -515,55 +515,7 @@ class _WasteCollectionSchedulePageState
                         ),
                     ],
                   ),
-                  const SizedBox(height: 20),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFF1F5F9)),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          margin: const EdgeInsets.only(top: 2),
-                          child: const Icon(
-                            Icons.route_rounded,
-                            color: AppColors.primary,
-                            size: 20,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Collection Route",
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  color: AppColors.mutedForeground,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                route.isNotEmpty ? route : "Route not specified",
-                                style: GoogleFonts.outfit(
-                                  fontSize: 16,
-                                  color: AppColors.foreground,
-                                  fontWeight: FontWeight.w600,
-                                  height: 1.4,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+
                 ],
               ),
             ),

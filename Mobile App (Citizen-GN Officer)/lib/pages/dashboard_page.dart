@@ -697,7 +697,7 @@ class _DashboardPageState extends State<DashboardPage> {
             : List<Map<String, dynamic>>.from(schedule['entries'] ?? const []);
         final nextEntry = entries.isNotEmpty ? entries.first : null;
         final areaLabel = schedule?['areaLabel']?.toString().trim() ?? '';
-        final route = schedule?['route']?.toString().trim() ?? '';
+
 
         return Container(
           width: double.infinity,
@@ -802,13 +802,7 @@ class _DashboardPageState extends State<DashboardPage> {
                         ? context.tr('noWasteScheduleYet')
                         : _formatWastePreview(nextEntry),
                   ),
-                  if (route.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    _buildWastePreviewPill(
-                      icon: Icons.alt_route_rounded,
-                      label: route,
-                    ),
-                  ],
+
                   const SizedBox(height: 14),
                   Align(
                     alignment: Alignment.centerLeft,
