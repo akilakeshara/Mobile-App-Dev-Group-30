@@ -1,18 +1,27 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import '../models/complaint.dart';
 import '../models/application.dart';
 import '../models/gn_appointment.dart';
 import '../models/user_model.dart';
 import '../models/officer_alert.dart';
 import '../utils/input_validators.dart';
+import '../utils/officer_policy_utils.dart';
 import 'offline_sync_queue_service.dart';
 import 'package:flutter/foundation.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'dart:convert';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final String _actionSessionId =
+      'sess-${DateTime.now().millisecondsSinceEpoch.toRadixString(36)}';
   static bool _offlineSyncInitialized = false;
+  static const String _citizensCollection = 'citizens';
+  static const String _officersCollection = 'officers';
+  UserModel? _currentUser;
 
   FirestoreService() {
     _initializeOfflineSync();
@@ -54,6 +63,12 @@ class FirestoreService {
           error.code == 'deadline-exceeded';
     }
     return false;
+  }
+
+  String _actionDeviceId() {
+    final platform = defaultTargetPlatform.name;
+    final actor = currentUserId.trim().isEmpty ? 'unknown' : currentUserId;
+    return '$platform-$actor';
   }
 
   Future<void> _setWithOfflineFallback({
@@ -111,11 +126,25 @@ class FirestoreService {
 
   // --------- USERS ---------
 
+  bool _isOfficerRole(String role) {
+    final normalizedRole = role.toLowerCase();
+    return normalizedRole == 'officer' || normalizedRole == 'admin';
+  }
+
+  String _collectionForRole(String role) {
+    return _isOfficerRole(role) ? _officersCollection : _citizensCollection;
+  }
+
   Future<UserModel?> getUser(String uid) async {
     try {
-      final doc = await _db.collection('users').doc(uid).get();
-      if (doc.exists && doc.data() != null) {
-        return UserModel.fromMap(doc.data()!, doc.id);
+      final cDoc = await _db.collection(_citizensCollection).doc(uid).get();
+      if (cDoc.exists && cDoc.data() != null) {
+        return UserModel.fromMap(cDoc.data()!, cDoc.id);
+      }
+
+      final oDoc = await _db.collection(_officersCollection).doc(uid).get();
+      if (oDoc.exists && oDoc.data() != null) {
+        return UserModel.fromMap(oDoc.data()!, oDoc.id);
       }
     } catch (e) {
       debugPrint("Error fetching user: $e");
@@ -123,13 +152,29 @@ class FirestoreService {
     return null;
   }
 
-  Stream<UserModel?> getUserStream(String uid) {
-    return _db.collection('users').doc(uid).snapshots().map((doc) {
-      if (doc.exists && doc.data() != null) {
-        return UserModel.fromMap(doc.data()!, doc.id);
-      }
-      return null;
+  Future<String?> _getUserCollection(String uid) async {
+    final cDoc = await _db.collection(_citizensCollection).doc(uid).get();
+    if (cDoc.exists) return _citizensCollection;
+    final oDoc = await _db.collection(_officersCollection).doc(uid).get();
+    if (oDoc.exists) return _officersCollection;
+    return null;
+  }
+
+  Stream<UserModel?> getUserStream(String uid) async* {
+    final col = await _getUserCollection(uid);
+    if (col == null) {
+      yield null;
+      return;
+    }
+    yield* _db.collection(col).doc(uid).snapshots().map((doc) {
+      if (!doc.exists) return null;
+      return UserModel.fromMap(doc.data()!, doc.id);
     });
+  }
+
+  Future<void> deleteUser(String documentId, String role) async {
+    final collection = _collectionForRole(role);
+    await _db.collection(collection).doc(documentId).delete();
   }
 
   Future<void> createUser(UserModel user) async {
@@ -137,7 +182,7 @@ class FirestoreService {
     data['nicNormalized'] = InputValidators.normalizeNic(user.nic);
     data['phoneNormalized'] = InputValidators.normalizePhoneToLocal(user.phone);
     await _setWithOfflineFallback(
-      collection: 'users',
+      collection: _collectionForRole(user.role),
       documentId: user.id,
       data: data,
     );
@@ -148,9 +193,20 @@ class FirestoreService {
     data['nicNormalized'] = InputValidators.normalizeNic(user.nic);
     data['phoneNormalized'] = InputValidators.normalizePhoneToLocal(user.phone);
     await _updateWithOfflineFallback(
-      collection: 'users',
+      collection: _collectionForRole(user.role),
       documentId: user.id,
       data: data,
+    );
+  }
+
+  Future<void> mergeUserFields(String uid, Map<String, dynamic> data) async {
+    final collection = await _getUserCollection(uid);
+    if (collection == null) return;
+    await _setWithOfflineFallback(
+      collection: collection,
+      documentId: uid,
+      data: data,
+      merge: true,
     );
   }
 
@@ -158,8 +214,10 @@ class FirestoreService {
     String uid,
     String languageCode,
   ) async {
+    final user = await getUser(uid);
+    if (user == null) return;
     await _setWithOfflineFallback(
-      collection: 'users',
+      collection: _collectionForRole(user.role),
       documentId: uid,
       data: {'preferredLanguage': languageCode},
       merge: true,
@@ -170,8 +228,10 @@ class FirestoreService {
     String uid,
     String profileImageUrl,
   ) async {
+    final user = await getUser(uid);
+    if (user == null) return;
     await _setWithOfflineFallback(
-      collection: 'users',
+      collection: _collectionForRole(user.role),
       documentId: uid,
       data: {'profileImageUrl': profileImageUrl},
       merge: true,
@@ -183,47 +243,54 @@ class FirestoreService {
     if (normalizedNic.isEmpty) return null;
 
     try {
-      final normalizedQuery = await _db
-          .collection('users')
+      final query = await _db
+          .collection(_citizensCollection)
           .where('nicNormalized', isEqualTo: normalizedNic)
           .limit(1)
           .get();
 
-      if (normalizedQuery.docs.isNotEmpty) {
-        final doc = normalizedQuery.docs.first;
-        final data = doc.data();
-        if ((data['role'] ?? 'citizen') == 'citizen') {
-          return UserModel.fromMap(data, doc.id);
-        }
+      if (query.docs.isNotEmpty) {
+        final doc = query.docs.first;
+        return UserModel.fromMap(doc.data(), doc.id);
       }
 
-      final legacyCandidates = <String>{
-        normalizedNic,
-        normalizedNic.toLowerCase(),
-      }.toList();
-
+      final legacyCandidates = [normalizedNic, normalizedNic.toLowerCase()];
       final legacyQuery = await _db
-          .collection('users')
+          .collection(_citizensCollection)
           .where('nic', whereIn: legacyCandidates)
           .limit(5)
           .get();
 
       for (final doc in legacyQuery.docs) {
         final data = doc.data();
-        if ((data['role'] ?? 'citizen') != 'citizen') {
-          continue;
-        }
-
         final model = UserModel.fromMap(data, doc.id);
-        await _db.collection('users').doc(doc.id).set({
+        await _db.collection(_citizensCollection).doc(doc.id).set({
+          ...data,
           'nicNormalized': normalizedNic,
         }, SetOptions(merge: true));
         return model;
       }
-
       return null;
     } catch (e) {
       debugPrint('Error finding citizen by NIC: $e');
+      return null;
+    }
+  }
+
+  Future<UserModel?> getCitizenByUid(String uid) async {
+    if (uid.trim().isEmpty) {
+      return null;
+    }
+
+    try {
+      final doc = await _db.collection(_citizensCollection).doc(uid).get();
+      if (!doc.exists || doc.data() == null) {
+        return null;
+      }
+
+      return UserModel.fromMap(doc.data()!, doc.id);
+    } catch (e) {
+      debugPrint('Error fetching citizen by UID: $e');
       return null;
     }
   }
@@ -234,18 +301,15 @@ class FirestoreService {
     if (normalizedPhone.isEmpty && e164Phone.isEmpty) return null;
 
     try {
-      final normalizedQuery = await _db
-          .collection('users')
+      final query = await _db
+          .collection(_citizensCollection)
           .where('phoneNormalized', isEqualTo: normalizedPhone)
           .limit(1)
           .get();
 
-      if (normalizedQuery.docs.isNotEmpty) {
-        final doc = normalizedQuery.docs.first;
-        final data = doc.data();
-        if ((data['role'] ?? 'citizen') == 'citizen') {
-          return UserModel.fromMap(data, doc.id);
-        }
+      if (query.docs.isNotEmpty) {
+        final doc = query.docs.first;
+        return UserModel.fromMap(doc.data(), doc.id);
       }
 
       final legacyCandidates = <String>{
@@ -255,24 +319,20 @@ class FirestoreService {
       if (legacyCandidates.isEmpty) return null;
 
       final legacyQuery = await _db
-          .collection('users')
+          .collection(_citizensCollection)
           .where('phone', whereIn: legacyCandidates)
           .limit(5)
           .get();
 
       for (final doc in legacyQuery.docs) {
         final data = doc.data();
-        if ((data['role'] ?? 'citizen') != 'citizen') {
-          continue;
-        }
-
         final model = UserModel.fromMap(data, doc.id);
-        await _db.collection('users').doc(doc.id).set({
+        await _db.collection(_citizensCollection).doc(doc.id).set({
+          ...data,
           'phoneNormalized': normalizedPhone,
         }, SetOptions(merge: true));
         return model;
       }
-
       return null;
     } catch (e) {
       debugPrint('Error finding citizen by phone: $e');
@@ -287,19 +347,15 @@ class FirestoreService {
     }
 
     try {
-      final normalizedQuery = await _db
-          .collection('users')
+      final query = await _db
+          .collection(_officersCollection)
           .where('officerIdNormalized', isEqualTo: normalizedOfficerId)
           .limit(1)
           .get();
 
-      if (normalizedQuery.docs.isNotEmpty) {
-        final doc = normalizedQuery.docs.first;
-        final data = doc.data();
-        final role = (data['role'] ?? '').toString().toLowerCase();
-        if (role == 'officer' || role == 'admin') {
-          return UserModel.fromMap(data, doc.id);
-        }
+      if (query.docs.isNotEmpty) {
+        final doc = query.docs.first;
+        return UserModel.fromMap(doc.data(), doc.id);
       }
 
       final legacyCandidates = <String>{
@@ -308,19 +364,15 @@ class FirestoreService {
       }.toList();
 
       final legacyQuery = await _db
-          .collection('users')
+          .collection(_officersCollection)
           .where('officerId', whereIn: legacyCandidates)
           .limit(5)
           .get();
 
       for (final doc in legacyQuery.docs) {
         final data = doc.data();
-        final role = (data['role'] ?? '').toString().toLowerCase();
-        if (role != 'officer' && role != 'admin') {
-          continue;
-        }
-
-        await _db.collection('users').doc(doc.id).set({
+        await _db.collection(_officersCollection).doc(doc.id).set({
+          ...data,
           'officerIdNormalized': normalizedOfficerId,
         }, SetOptions(merge: true));
         return UserModel.fromMap(data, doc.id);
@@ -332,45 +384,116 @@ class FirestoreService {
     return null;
   }
 
-  Future<bool> validateOfficerPassword({
-    required String officerUid,
-    required String rawPassword,
-  }) async {
-    final password = rawPassword.trim();
-    if (password.isEmpty) {
-      return false;
+  Future<UserModel?> getOfficerByUid(String uid) async {
+    if (uid.trim().isEmpty) {
+      return null;
     }
 
     try {
-      final doc = await _db.collection('users').doc(officerUid).get();
-      final data = doc.data();
-      if (data == null) {
-        return false;
+      final doc = await _db.collection(_officersCollection).doc(uid).get();
+      if (!doc.exists || doc.data() == null) {
+        return null;
       }
 
-      final role = (data['role'] ?? '').toString().toLowerCase();
-      if (role != 'officer' && role != 'admin') {
-        return false;
-      }
-
-      final candidates =
-          <String>[
-                (data['officerPassword'] ?? '').toString(),
-                (data['password'] ?? '').toString(),
-              ]
-              .map((value) => value.trim())
-              .where((value) => value.isNotEmpty)
-              .toList();
-
-      if (candidates.isEmpty) {
-        return false;
-      }
-
-      return candidates.any((stored) => stored == password);
+      return UserModel.fromMap(doc.data()!, doc.id);
     } catch (e) {
-      debugPrint('Error validating officer password: $e');
-      return false;
+      debugPrint('Error fetching officer by UID: $e');
+      return null;
     }
+  }
+
+  Future<void> mergeOfficerFields(String uid, Map<String, dynamic> data) async {
+    if (uid.trim().isEmpty) {
+      return;
+    }
+
+    await _setWithOfflineFallback(
+      collection: _officersCollection,
+      documentId: uid,
+      data: data,
+      merge: true,
+    );
+  }
+
+  Future<Map<String, dynamic>?> lookupCitizenIdentity({
+    required String nic,
+    required String phone,
+  }) async {
+    try {
+      final callable = FirebaseFunctions.instanceFor(
+        region: 'us-central1',
+      ).httpsCallable('lookupCitizenIdentity');
+      final res = await callable.call({
+        'nic': InputValidators.normalizeNic(nic),
+        'phone': InputValidators.normalizePhoneToLocal(phone),
+      });
+      final data = Map<String, dynamic>.from((res.data as Map?) ?? {});
+      return data;
+    } catch (e) {
+      debugPrint('Error looking up citizen identity: $e');
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> checkCitizenRegistration({
+    required String nic,
+    required String phone,
+  }) async {
+    try {
+      final callable = FirebaseFunctions.instanceFor(
+        region: 'us-central1',
+      ).httpsCallable('checkCitizenRegistration');
+      final res = await callable.call({
+        'nic': InputValidators.normalizeNic(nic),
+        'phone': InputValidators.normalizePhoneToLocal(phone),
+      });
+      return Map<String, dynamic>.from((res.data as Map?) ?? {});
+    } catch (e) {
+      debugPrint('Error checking citizen registration: $e');
+      return null;
+    }
+  }
+
+  Future<UserModel?> lookupOfficerIdentity(String officerId) async {
+    try {
+      final callable = FirebaseFunctions.instanceFor(
+        region: 'us-central1',
+      ).httpsCallable('lookupOfficerIdentity');
+      final res = await callable.call({
+        'officerId': InputValidators.normalizeOfficerId(officerId),
+      });
+      final data = Map<String, dynamic>.from((res.data as Map?) ?? {});
+      if (data['found'] != true) {
+        return null;
+      }
+
+      return UserModel(
+        id: (data['uid'] ?? '').toString(),
+        name: (data['name'] ?? '').toString(),
+        nic: (data['nic'] ?? '').toString(),
+        phone: (data['phone'] ?? '').toString(),
+        role: (data['role'] ?? 'officer').toString(),
+        division: (data['division'] ?? '').toString(),
+        province: (data['province'] ?? '').toString(),
+        district: (data['district'] ?? '').toString(),
+        pradeshiyaSabha: (data['pradeshiyaSabha'] ?? '').toString(),
+        gramasewaWasama: (data['gramasewaWasama'] ?? '').toString(),
+        preferredLanguage: (data['preferredLanguage'] ?? 'en').toString(),
+        profileImageUrl: (data['profileImageUrl'] ?? '').toString(),
+        createdAt: DateTime.now(),
+      );
+    } catch (e) {
+      debugPrint('Error looking up officer identity: $e');
+      return null;
+    }
+  }
+
+  Future<void> updateUserRole(String uid, String newRole) async {
+    final callable = FirebaseFunctions.instanceFor(
+      region: 'us-central1',
+    ).httpsCallable('setUserRoleSecure');
+
+    await callable.call({'targetUid': uid, 'targetRole': newRole});
   }
 
   Future<Map<String, dynamic>?> getWasteCollectionScheduleForUser(
@@ -396,37 +519,73 @@ class FirestoreService {
         return null;
       }
 
-      final rawHierarchy =
-          configData['provinces'] ?? configData['hierarchy'] ?? configData;
-      if (rawHierarchy is! Map) {
-        return null;
-      }
+      final rawHierarchy = configData;
 
-      final provinceNode = _findScheduleNode(
-        rawHierarchy,
-        _buildLookupCandidates(user.province),
-      );
-      if (provinceNode is! Map) {
-        return null;
-      }
-
-      final districtNode = _findScheduleNode(
-        provinceNode,
-        _buildLookupCandidates(user.district),
-      );
-      if (districtNode is! Map) {
-        return null;
-      }
-
-      final areaNode = _findScheduleNode(
-        districtNode,
-        _buildLookupCandidates(
-          user.pradeshiyaSabha,
-          fallback: [user.gramasewaWasama, user.division],
-        ),
+      // Build candidates for searching
+      final candidates = _buildLookupCandidates(
+        user.pradeshiyaSabha,
+        fallback: [user.gramasewaWasama, user.division],
       );
 
-      if (areaNode == null) {
+      // Deep search method to find the node anywhere in the JSON tree
+      Map? foundAreaNode;
+      int bestScore = -1;
+
+      void deepSearch(dynamic node) {
+        if (node is! Map) return;
+
+        for (final entry in node.entries) {
+          final key = entry.key.toString().toLowerCase();
+
+          // Check for matches
+          for (final candidate in candidates) {
+            if (candidate.isEmpty) continue;
+            final cand = candidate.toLowerCase();
+            
+            if (key == cand || key.contains(cand) || cand.contains(key)) {
+              if (entry.value is Map) {
+                final match = entry.value as Map;
+                
+                // Score the match based on entries
+                int score = 0;
+                if (match['entries'] != null && (match['entries'] as List).isNotEmpty) {
+                  score = 100; // Found entries! Highest priority.
+                } else if (key == cand) {
+                  score = 50; // Exact match but empty.
+                } else {
+                  score = 10; // Partial match but empty.
+                }
+
+                if (score > bestScore) {
+                  bestScore = score;
+                  foundAreaNode = match;
+                }
+              }
+            }
+          }
+
+          // Recurse into children, avoiding the 'entries' array itself
+          if (entry.value is Map && entry.key != 'entries') {
+            deepSearch(entry.value);
+          }
+        }
+      }
+
+      deepSearch(rawHierarchy);
+
+      if (foundAreaNode == null) {
+        // Collect some top level structure info for debugging
+        String dbInfo = "";
+        try {
+            if (rawHierarchy.containsKey('Western') && rawHierarchy['Western'] is Map) {
+                var w = rawHierarchy['Western'] as Map;
+                if (w.containsKey('Colombo') && w['Colombo'] is Map) {
+                    var c = w['Colombo'] as Map;
+                    dbInfo = c.keys.join(",");
+                }
+            }
+        } catch(e) {}
+
         return {
           'areaLabel': [
             user.pradeshiyaSabha,
@@ -445,11 +604,12 @@ class FirestoreService {
               configData['updatedAt'] ??
               configData['lastUpdatedAt']?.toString(),
           'entries': const <Map<String, dynamic>>[],
+          'debug_info': 'Cands: ${candidates.join("|")}. DB Colombo keys: $dbInfo',
         };
       }
 
       return _normalizeWasteCollectionSchedule(
-        areaNode,
+        foundAreaNode!,
         user: user,
         updatedAt: configData['updatedAt'] ?? configData['lastUpdatedAt'],
       );
@@ -544,6 +704,19 @@ class FirestoreService {
         }
       }
 
+      final myEntries = areaNode['entries'];
+      if (myEntries is List) {
+        for (final item in myEntries) {
+          if (item is Map) {
+            addEntry(item['day'] ?? item['date'] ?? item['label'], item);
+          }
+        }
+      } else if (myEntries is Map) {
+        for (final entry in myEntries.entries) {
+          addEntry(entry.key, entry.value);
+        }
+      }
+
       if (entries.isEmpty && nextCollection.isNotEmpty) {
         entries.add({
           'day': 'Next collection',
@@ -582,31 +755,8 @@ class FirestoreService {
       'notes': notes,
       'updatedAt': updatedAt?.toString(),
       'entries': entries,
+      'debug_info': 'Node found with ${entries.length} entries. Rawkeys: ${areaNode is Map ? areaNode.keys.join(",") : "Not map"}',
     };
-  }
-
-  dynamic _findScheduleNode(dynamic root, List<String> candidates) {
-    if (root is! Map || candidates.isEmpty) {
-      return null;
-    }
-
-    for (final entry in root.entries) {
-      if (_matchesScheduleKey(entry.key, candidates)) {
-        return entry.value;
-      }
-    }
-
-    for (final entry in root.entries) {
-      final value = entry.value;
-      if (value is Map) {
-        final nested = _findScheduleNode(value, candidates);
-        if (nested != null) {
-          return nested;
-        }
-      }
-    }
-
-    return null;
   }
 
   List<String> _buildLookupCandidates(
@@ -638,26 +788,7 @@ class FirestoreService {
     return candidates.toSet().toList();
   }
 
-  bool _matchesScheduleKey(dynamic key, List<String> candidates) {
-    final keyValue = key?.toString().trim() ?? '';
-    if (keyValue.isEmpty) {
-      return false;
-    }
 
-    final normalizedKey = _normalizeScheduleText(keyValue);
-    return candidates.any((candidate) {
-      final normalizedCandidate = _normalizeScheduleText(candidate);
-      return normalizedKey == normalizedCandidate;
-    });
-  }
-
-  String _normalizeScheduleText(String value) {
-    return value
-        .toLowerCase()
-        .replaceAll(RegExp(r'\bpradeshiya\s+sabha\b'), '')
-        .replaceAll(RegExp(r'\bps\b'), '')
-        .replaceAll(RegExp(r'[^a-z0-9]'), '');
-  }
 
   // --------- APP CONFIG ---------
 
@@ -801,6 +932,14 @@ class FirestoreService {
         });
   }
 
+  Stream<List<Map<String, dynamic>>> getCitizenNotifications({int limit = 20}) {
+    return getUserNotifications(limit: limit);
+  }
+
+  Stream<List<Map<String, dynamic>>> getOfficerNotifications({int limit = 20}) {
+    return getUserNotifications(limit: limit);
+  }
+
   Future<void> markNotificationAsRead(String id) async {
     await _updateWithOfflineFallback(
       collection: 'notifications',
@@ -830,28 +969,112 @@ class FirestoreService {
 
   // --------- APPLICATIONS ---------
 
-  Stream<List<Application>> getUserApplications() {
-    return _db
+  Stream<List<Application>> getUserApplications() async* {
+    final box = Hive.box('cacheBox');
+    final cacheKey = 'user_applications_$currentUserId';
+
+    // Serve from local read-cache first
+    if (box.containsKey(cacheKey)) {
+      try {
+        final cachedData = jsonDecode(box.get(cacheKey));
+        final list = (cachedData as List)
+            .map((map) => Application.fromMap(map, map['id']))
+            .toList();
+        yield list;
+      } catch (e) {
+        debugPrint('Cache read error: $e');
+      }
+    }
+
+    yield* _db
         .collection('applications')
         .where('userId', isEqualTo: currentUserId)
-        // Not using orderBy directly in query to avoid requiring composite indexes for beta testing
         .snapshots()
         .map((snapshot) {
           final list = snapshot.docs
               .map((doc) => Application.fromMap(doc.data(), doc.id))
               .toList();
-          // Sort locally by createdAt descending
+
           list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+          // Update local read-cache
+          try {
+            final dataToCache = list.map((a) {
+              var map = a.toMap();
+              map['id'] = a.id;
+              // serialize dates for json
+              map['createdAt'] = a.createdAt.toIso8601String();
+              return map;
+            }).toList();
+            box.put(cacheKey, jsonEncode(dataToCache));
+          } catch (_) {}
+
           return list;
         });
   }
 
   Future<void> addApplication(Application app) async {
+    final data = await _enrichWithDivision(app.toMap());
     await _setWithOfflineFallback(
       collection: 'applications',
       documentId: app.id,
-      data: app.toMap(),
+      data: data,
     );
+  }
+
+  Future<Map<String, dynamic>> _enrichWithDivision(
+    Map<String, dynamic> data,
+  ) async {
+    final enriched = Map<String, dynamic>.from(data);
+
+    try {
+      if (currentUserId == 'anonymous_user') {
+        debugPrint(
+          "FirestoreService: Not enriching document - user is anonymous.",
+        );
+        return enriched;
+      }
+
+      // Check if division is already set and not encrypted
+      final existingDiv =
+          (enriched['gnDivision'] ?? enriched['gramasewaWasama'] ?? '')
+              .toString();
+      if (existingDiv.isNotEmpty && !existingDiv.startsWith('ENC:')) {
+        return enriched;
+      }
+
+      // Use cached user if available, otherwise fetch
+      UserModel? user = _currentUser;
+      if (user == null || user.id != currentUserId) {
+        user = await getUser(currentUserId);
+        if (user != null) {
+          _currentUser = user;
+        }
+      }
+
+      if (user != null) {
+        final div =
+            user.gramasewaWasama.isNotEmpty ? user.gramasewaWasama : user.division;
+
+        if (div.isNotEmpty) {
+          enriched['gnDivision'] = div;
+          enriched['gramasewaWasama'] = div; // Ensure both variants for compatibility
+        }
+        
+        if (user.pradeshiyaSabha.isNotEmpty) {
+           enriched['pradeshiyaSabha'] = user.pradeshiyaSabha;
+        }
+
+        debugPrint(
+            "FirestoreService: Enriched document with division: $div | PS: ${user.pradeshiyaSabha}");
+
+      }
+    } catch (e) {
+      debugPrint("FirestoreService: Warning: Failed to enrich with division: $e");
+      // Continue anyway, better have a record without division than no record at all
+    }
+
+    return enriched;
   }
 
   // --------- COMPLAINTS ---------
@@ -871,10 +1094,11 @@ class FirestoreService {
   }
 
   Future<void> addComplaint(Complaint complaint) async {
+    final data = await _enrichWithDivision(complaint.toMap());
     await _setWithOfflineFallback(
       collection: 'complaints',
       documentId: complaint.id,
-      data: complaint.toMap(),
+      data: data,
     );
   }
 
@@ -919,11 +1143,25 @@ class FirestoreService {
   }
 
   bool _matchesOfficerArea(UserModel officer, GnAppointment appointment) {
+    // If the officer has a specific GN division (gramasewaWasama), only show
+    // appointments from that exact division — strict scope for GN officers.
+    final officerGnDivision = officer.gramasewaWasama.trim();
+    if (officerGnDivision.isNotEmpty) {
+      final appointmentGnDivision = appointment.gramasewaWasama.trim();
+      if (appointmentGnDivision.isEmpty) {
+        // Appointment has no GN division tagged — don't show to this officer.
+        return false;
+      }
+      return _normalizeAreaText(appointmentGnDivision) ==
+          _normalizeAreaText(officerGnDivision);
+    }
+
+    // Fallback: officer has no GN division — match on broader areas
+    // (pradeshiyaSabha, district, province).
     final officerAreas = [
       officer.province,
       officer.district,
       officer.pradeshiyaSabha,
-      officer.gramasewaWasama,
       officer.division,
     ].where((value) => value.trim().isNotEmpty).toList();
 
@@ -940,10 +1178,7 @@ class FirestoreService {
 
     for (final officerArea in officerAreas) {
       final normalizedOfficerArea = _normalizeAreaText(officerArea);
-      if (normalizedOfficerArea.isEmpty) {
-        continue;
-      }
-
+      if (normalizedOfficerArea.isEmpty) continue;
       for (final appointmentArea in appointmentAreas) {
         if (_normalizeAreaText(appointmentArea) == normalizedOfficerArea) {
           return true;
@@ -963,10 +1198,11 @@ class FirestoreService {
   }
 
   Future<String> addGnAppointment(GnAppointment appointment) async {
+    final data = await _enrichWithDivision(appointment.toMap());
     await _setWithOfflineFallback(
       collection: 'gn_appointments',
       documentId: appointment.id,
-      data: appointment.toMap(),
+      data: data,
     );
 
     await _createNotification(
@@ -985,6 +1221,8 @@ class FirestoreService {
     String? officerNotes,
     DateTime? scheduledDate,
     List<String>? expectedCurrentStatuses,
+    String? actingOfficerId,
+    String? actingOfficerName,
   }) async {
     final ref = _db.collection('gn_appointments').doc(appointmentId);
     String userId = '';
@@ -998,6 +1236,9 @@ class FirestoreService {
 
       final data = doc.data();
       final currentStatus = (data?['status'] ?? '').toString();
+      final assignedOfficerId = (data?['assignedOfficerId'] ?? '')
+          .toString()
+          .trim();
 
       if (expectedCurrentStatuses != null &&
           expectedCurrentStatuses.isNotEmpty) {
@@ -1015,11 +1256,30 @@ class FirestoreService {
       referenceNumber = data?['referenceNumber']?.toString() ?? appointmentId;
 
       final nowIso = DateTime.now().toIso8601String();
-      final updates = <String, dynamic>{
-        'status': status,
-        'updatedAt': nowIso,
-        'responseAt': nowIso,
-      };
+      final updates = <String, dynamic>{'status': status, 'updatedAt': nowIso};
+
+      final actingId = (actingOfficerId ?? '').trim();
+      final actorUid = actingId.isNotEmpty ? actingId : currentUserId;
+      updates.addAll(
+        buildOfficerActionMetadata(
+          actorUid: actorUid,
+          reason: officerNotes ?? '',
+          sessionId: _actionSessionId,
+          deviceId: _actionDeviceId(),
+        ),
+      );
+
+      if (actingId.isNotEmpty) {
+        if (assignedOfficerId.isNotEmpty && assignedOfficerId != actingId) {
+          throw StateError(
+            'This appointment is already handled by another officer.',
+          );
+        }
+        updates['assignedOfficerId'] = actingId;
+        if ((actingOfficerName ?? '').trim().isNotEmpty) {
+          updates['assignedOfficerName'] = actingOfficerName!.trim();
+        }
+      }
 
       if (officerNotes != null && officerNotes.trim().isNotEmpty) {
         updates['officerNotes'] = officerNotes.trim();
@@ -1079,26 +1339,25 @@ class FirestoreService {
 
   // --------- OFFICER METHODS ---------
 
-  Stream<List<Application>> getAllApplications() {
-    debugPrint("FirestoreService: getAllApplications() called");
-    return _db
-        .collection('applications')
+  Stream<List<Application>> getAllApplications({String? gnDivision}) {
+    debugPrint("FirestoreService: getAllApplications() called with gnDivision=$gnDivision");
+    // Removing exact where filter to perform robust normalized local filtering
+    return _db.collection('applications')
         .snapshots()
-        .handleError((e) {
-          debugPrint("FirestoreService: Error getting applications: $e");
-        })
         .map((snapshot) {
-          debugPrint(
-            "FirestoreService: Got ${snapshot.docs.length} applications from Firebase",
-          );
+          final normalizedSearch = gnDivision != null ? _normalizeAreaText(gnDivision) : null;
+          
           final list = snapshot.docs
               .map((doc) {
                 try {
-                  return Application.fromMap(doc.data(), doc.id);
+                  final app = Application.fromMap(doc.data(), doc.id);
+                  // Apply regional filtering locally if gnDivision specified
+                  if (normalizedSearch != null) {
+                    final appDiv = _normalizeAreaText(app.gnDivision.isNotEmpty ? app.gnDivision : (doc.data()['gramasewaWasama'] ?? '').toString());
+                    if (appDiv != normalizedSearch) return null;
+                  }
+                  return app;
                 } catch (e) {
-                  debugPrint(
-                    "FirestoreService: Failed to parse Application doc ${doc.id}: $e",
-                  );
                   return null;
                 }
               })
@@ -1110,26 +1369,25 @@ class FirestoreService {
         });
   }
 
-  Stream<List<Complaint>> getAllComplaints() {
-    debugPrint("FirestoreService: getAllComplaints() called");
-    return _db
-        .collection('complaints')
+  Stream<List<Complaint>> getAllComplaints({String? gnDivision}) {
+    debugPrint("FirestoreService: getAllComplaints() called with gnDivision=$gnDivision");
+    // Optimized regional isolation with normalized local filtering
+    return _db.collection('complaints')
         .snapshots()
-        .handleError((e) {
-          debugPrint("FirestoreService: Error getting complaints: $e");
-        })
         .map((snapshot) {
-          debugPrint(
-            "FirestoreService: Got ${snapshot.docs.length} complaints from Firebase",
-          );
+          final normalizedSearch = gnDivision != null ? _normalizeAreaText(gnDivision) : null;
+
           final list = snapshot.docs
               .map((doc) {
                 try {
-                  return Complaint.fromMap(doc.data(), doc.id);
+                  final c = Complaint.fromMap(doc.data(), doc.id);
+                  // Apply regional filtering locally if gnDivision specified
+                  if (normalizedSearch != null) {
+                    final cDiv = _normalizeAreaText(c.gnDivision.isNotEmpty ? c.gnDivision : (doc.data()['gramasewaWasama'] ?? '').toString());
+                    if (cDiv != normalizedSearch) return null;
+                  }
+                  return c;
                 } catch (e) {
-                  debugPrint(
-                    "FirestoreService: Failed to parse Complaint doc ${doc.id}: $e",
-                  );
                   return null;
                 }
               })
@@ -1141,17 +1399,76 @@ class FirestoreService {
         });
   }
 
+  Future<void> updateApplicationRef(
+    String documentId,
+    Map<String, dynamic> data,
+  ) async {
+    await _updateWithOfflineFallback(
+      collection: 'applications',
+      documentId: documentId,
+      data: data,
+    );
+  }
+
+  Future<void> rateGNAppointment(
+    String appointmentId,
+    int rating,
+    String feedback,
+  ) async {
+    await _updateWithOfflineFallback(
+      collection: 'gn_appointments',
+      documentId: appointmentId,
+      data: {'rating': rating, 'feedback': feedback},
+    );
+  }
+
   Future<void> updateApplicationStatus(
     String applicationId,
-    String status,
-  ) async {
+    String status, {
+    String? remarks,
+  }) async {
     final doc = await _db.collection('applications').doc(applicationId).get();
     final userId = doc.data()?['userId']?.toString() ?? '';
+
+    int currentStep = 1;
+    switch (status) {
+      case 'Submitted':
+        currentStep = 1;
+        break;
+      case 'Verified':
+        currentStep = 2;
+        break;
+      case 'Processing':
+        currentStep = 3;
+        break;
+      case 'Completed':
+        currentStep = 4;
+        break;
+      case 'Rejected':
+        currentStep = 0; // or special handling
+        break;
+      default:
+        currentStep = 1;
+    }
+
+    final updateData = <String, dynamic>{
+      'status': status,
+      'currentStep': currentStep,
+      ...buildOfficerActionMetadata(
+        actorUid: currentUserId,
+        reason: remarks ?? '',
+        sessionId: _actionSessionId,
+        deviceId: _actionDeviceId(),
+      ),
+    };
+    if (remarks != null && remarks.isNotEmpty) {
+      updateData['officerRemarks'] = remarks;
+    }
 
     await _updateWithOfflineFallback(
       collection: 'applications',
       documentId: applicationId,
-      data: {'status': status},
+      data: updateData,
     );
 
     if (userId.isNotEmpty) {
@@ -1163,15 +1480,69 @@ class FirestoreService {
     }
   }
 
-  Future<void> updateComplaintStatus(String complaintId, String status) async {
-    final doc = await _db.collection('complaints').doc(complaintId).get();
-    final userId = doc.data()?['userId']?.toString() ?? '';
+  Future<Application?> getApplicationByCertificateReference(
+    String reference,
+  ) async {
+    final trimmed = reference.trim();
+    if (trimmed.isEmpty) return null;
 
+    try {
+      final query = await _db
+          .collection('applications')
+          .where('certificateReference', isEqualTo: trimmed)
+          .limit(1)
+          .get();
+
+      if (query.docs.isNotEmpty) {
+        final doc = query.docs.first;
+        return Application.fromMap(doc.data(), doc.id);
+      }
+    } catch (e) {
+      debugPrint('Error finding certificate reference: $e');
+    }
+
+    return null;
+  }
+
+  Future<Map<String, dynamic>?> verifyCertificateReferenceSecure(
+    String reference,
+  ) async {
+    final trimmed = reference.trim();
+    if (trimmed.isEmpty) return null;
+
+    try {
+      final callable = FirebaseFunctions.instanceFor(
+        region: 'us-central1',
+      ).httpsCallable('verifyCertificateReference');
+      final res = await callable.call({'reference': trimmed});
+      return Map<String, dynamic>.from((res.data as Map?) ?? {});
+    } catch (e) {
+      debugPrint('Error verifying certificate reference securely: $e');
+      return null;
+    }
+  }
+
+  Future<void> updateComplaintStatus(
+    String complaintId,
+    String status, {
+    String? reason,
+  }) async {
     await _updateWithOfflineFallback(
       collection: 'complaints',
       documentId: complaintId,
-      data: {'status': status},
+      data: {
+        'status': status,
+        ...buildOfficerActionMetadata(
+          actorUid: currentUserId,
+          reason: reason ?? '',
+          sessionId: _actionSessionId,
+          deviceId: _actionDeviceId(),
+        ),
+      },
     );
+
+    final doc = await _db.collection('complaints').doc(complaintId).get();
+    final userId = doc.data()?['userId']?.toString() ?? '';
 
     if (userId.isNotEmpty) {
       await _createNotification(
@@ -1189,91 +1560,75 @@ class FirestoreService {
     required String serviceName,
     Map<String, dynamic>? pendingApplicationData,
   }) async {
-    final appRef = _db.collection('applications').doc(applicationId);
-    final appDoc = await appRef.get();
-
-    final pending = pendingApplicationData ?? const <String, dynamic>{};
-    final pendingServiceType = (pending['serviceType'] ?? serviceName)
-        .toString();
-    final pendingStatus = (pending['status'] ?? 'Submitted').toString();
-    final pendingStepRaw = pending['currentStep'];
-    final pendingStep = pendingStepRaw is num ? pendingStepRaw.toInt() : 1;
-
-    final rawDocumentUrls = pending['documentUrls'];
-    final documentUrls = <String, String>{};
-    if (rawDocumentUrls is Map) {
-      for (final entry in rawDocumentUrls.entries) {
-        documentUrls[entry.key.toString()] = entry.value.toString();
-      }
-    }
-
-    final userId = appDoc.exists
-        ? (appDoc.data()?['userId']?.toString() ?? currentUserId)
-        : currentUserId;
-
+    final userId = currentUserId;
     final nowIso = DateTime.now().toIso8601String();
 
-    if (!appDoc.exists) {
+    try {
+      debugPrint(
+        "FirestoreService: Recording payment success for $applicationId (Payment: $paymentId)",
+      );
+
+      // Create or update the application document without reading first (to avoid read permission errors)
+      // If it's new, the merge true will act like a creation.
+      // We'll prepare the data fields common to both.
+      
+      final applicationData = await _enrichWithDivision({
+        'serviceType': serviceName,
+        'status': 'Submitted',
+        'userId': userId,
+        'paid': true,
+        'paymentId': paymentId,
+        'paymentAmount': amount,
+        'paymentAt': nowIso,
+        'lastPaymentSyncAt': nowIso,
+        if (pendingApplicationData != null) ...pendingApplicationData,
+        ...buildOfficerActionMetadata(
+          actorUid: userId,
+          reason: 'Payment successful for $serviceName',
+          sessionId: _actionSessionId,
+          deviceId: _actionDeviceId(),
+        ),
+      });
+
+      // Use a set with merge instead of read-then-write
       await _setWithOfflineFallback(
         collection: 'applications',
         documentId: applicationId,
-        data: {
-          'serviceType': pendingServiceType,
-          'status': pendingStatus,
-          'createdAt': nowIso,
-          'userId': userId,
-          'currentStep': pendingStep,
-          'documentUrls': documentUrls,
-          'paymentStatus': 'Paid',
-          'paymentId': paymentId,
-          'paymentAmount': amount,
-          'paymentServiceName': serviceName,
-          'paidAt': nowIso,
-        },
+        data: applicationData,
+        merge: true,
       );
-    } else {
-      await _updateWithOfflineFallback(
-        collection: 'applications',
-        documentId: applicationId,
-        data: {
-          'paymentStatus': 'Paid',
-          'paymentId': paymentId,
-          'paymentAmount': amount,
-          'paymentServiceName': serviceName,
-          'paidAt': nowIso,
-        },
+
+      debugPrint(
+        "FirestoreService: Successfully saved application $applicationId to database via merge write.",
       );
-    }
 
-    await _setWithOfflineFallback(
-      collection: 'payments',
-      documentId: paymentId,
-      data: {
-        'applicationId': applicationId,
-        'userId': userId,
-        'serviceName': serviceName,
-        'amount': amount,
-        'status': 'Success',
-        'createdAt': nowIso,
-      },
-    );
+      debugPrint(
+        "FirestoreService: Successfully saved application $applicationId to database.",
+      );
 
-    if (userId.isNotEmpty) {
+      // Create notification
       await _createNotification(
         userId: userId,
-        title: 'Payment successful',
+        title: 'Application Submitted',
         body:
-            'Your payment for $serviceName was successful. Transaction: $paymentId',
+            'Your application for $serviceName has been successfully submitted.',
       );
+    } catch (e) {
+      debugPrint("FirestoreService: CRITICAL ERROR in recordPaymentSuccess: $e");
+      rethrow;
     }
   }
 
-  Stream<List<UserModel>> getAllUsersStream() {
-    return _db.collection('users').snapshots().map((snapshot) {
+  Stream<List<UserModel>> getCitizensStream() {
+    return _db.collection(_citizensCollection).snapshots().map((snapshot) {
       return snapshot.docs
           .map((doc) => UserModel.fromMap(doc.data(), doc.id))
           .toList();
     });
+  }
+
+  Stream<List<UserModel>> getAllUsersStream() {
+    return getCitizensStream();
   }
 
   // --------- ROLE-BASED QUERIES ---------
@@ -1281,7 +1636,7 @@ class FirestoreService {
   Future<List<UserModel>> getUsersByRole(String role) async {
     try {
       final query = await _db
-          .collection('users')
+          .collection(_collectionForRole(role))
           .where('role', isEqualTo: role)
           .get();
       return query.docs
@@ -1295,7 +1650,7 @@ class FirestoreService {
 
   Stream<List<UserModel>> getUsersByRoleStream(String role) {
     return _db
-        .collection('users')
+        .collection(_collectionForRole(role))
         .where('role', isEqualTo: role)
         .snapshots()
         .map((snapshot) {
