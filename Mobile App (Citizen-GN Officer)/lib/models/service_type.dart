@@ -16,6 +16,136 @@ class ServiceFormField {
   });
 }
 
+// Full province and district administrative hierarchy dataset
+const Map<String, Map<String, Map<String, List<String>>>> administrativeDataset = {
+  'Western': {
+    'Colombo': {
+      'Kolonnawa PS': ['Wellampitiya', 'Meethotamulla', 'Sedawatta'],
+      'Homagama PS': ['Homagama', 'Pitipana', 'Godagama'],
+    },
+    'Gampaha': {
+      'Ja-Ela PS': ['Ja-Ela South', 'Ekala', 'Kandana'],
+      'Divulapitiya PS': ['Divulapitiya', 'Badalgama', 'Minsingama'],
+    },
+    'Kalutara': {
+      'Bandaragama PS': ['Bandaragama', 'Waskaduwa', 'Raigama'],
+      'Millaniya PS': ['Millaniya', 'Yatadolawatta', 'Halwatura'],
+    },
+  },
+  'Central': {
+    'Kandy': {
+      'Akurana PS': ['Akurana', 'Bahirawakanda', 'Dunuwila'],
+      'Pathadumbara PS': ['Katugastota', 'Poojapitiya', 'Wattegama'],
+    },
+    'Matale': {
+      'Dambulla PS': ['Dambulla', 'Kandalama', 'Ibbankatuwa'],
+      'Galewela PS': ['Galewela', 'Bambaragaswewa', 'Kalundewa'],
+    },
+    'Nuwara Eliya': {
+      'Nuwara Eliya PS': ['Nuwara Eliya', 'Hawa Eliya', 'Blackpool'],
+      'Ambagamuwa PS': ['Ginigathhena', 'Nallathanniya', 'Watawala'],
+    },
+  },
+  'Southern': {
+    'Galle': {
+      'Bope Poddala PS': ['Poddala', 'Labuduwa', 'Yakkalamulla'],
+      'Habaraduwa PS': ['Habaraduwa', 'Ahangama', 'Koggala'],
+    },
+    'Matara': {
+      'Weligama PS': ['Weligama', 'Pelena', 'Denipitiya'],
+      'Akuressa PS': ['Akuressa', 'Aparekka', 'Kamburupitiya'],
+    },
+    'Hambantota': {
+      'Tissamaharama PS': ['Tissamaharama', 'Debarawewa', 'Yodakandiya'],
+      'Tangalle PS': ['Tangalle', 'Kudawella', 'Netolpitiya'],
+    },
+  },
+  'Northern': {
+    'Jaffna': {
+      'Nallur PS': ['Nallur', 'Kokuvil East', 'Kokuvil West'],
+      'Chavakachcheri PS': ['Chavakachcheri', 'Kodikamam', 'Kachchai'],
+    },
+    'Kilinochchi': {
+      'Karachchi PS': ['Kilinochchi', 'Kanakapuram', 'Paranthan'],
+    },
+    'Mannar': {
+      'Mannar PS': ['Mannar Town', 'Pesalai', 'Thoddaveli'],
+    },
+    'Mullaitivu': {
+      'Maritimepattu PS': ['Mullaitivu', 'Puthukudiyiruppu', 'Oddusuddan'],
+    },
+    'Vavuniya': {
+      'Vavuniya PS': ['Vavuniya', 'Nedunkeni', 'Cheddikulam'],
+    },
+  },
+  'Eastern': {
+    'Trincomalee': {
+      'Kinniya PS': ['Kinniya', 'Periyathottam', 'Kurinchakerny'],
+      'Morawewa PS': ['Morawewa', 'Gomarankadawala', 'Pulmoddai'],
+    },
+    'Batticaloa': {
+      'Kattankudy PS': ['Kattankudy', 'Navatkuda', 'Eravur'],
+      'Kaluwanchikudy PS': ['Kaluwanchikudy', 'Cheddipalayam', 'Vellaveli'],
+    },
+    'Ampara': {
+      'Sainthamaruthu PS': ['Sainthamaruthu', 'Sammanthurai', 'Nintavur'],
+      'Akkaraipattu PS': ['Akkaraipattu', 'Alayadivembu', 'Karaitivu'],
+    },
+  },
+  'North Western': {
+    'Kurunegala': {
+      'Kuliyapitiya PS': ['Kuliyapitiya', 'Wariyapola', 'Narammala'],
+      'Pannala PS': ['Pannala', 'Makandura', 'Wenwita'],
+    },
+    'Puttalam': {
+      'Wennappuwa PS': ['Wennappuwa', 'Lunuwila', 'Waikkal'],
+      'Anamaduwa PS': ['Anamaduwa', 'Mahauswewa', 'Pahala Puliyankulama'],
+    },
+  },
+  'North Central': {
+    'Anuradhapura': {
+      'Nuwaragam Palatha Central PS': [
+        'Anuradhapura Town',
+        'Mihintale',
+        'Nachchaduwa',
+      ],
+      'Kekirawa PS': ['Kekirawa', 'Maradankadawala', 'Madatugama'],
+    },
+    'Polonnaruwa': {
+      'Thamankaduwa PS': ['Polonnaruwa', 'Kaduruwela', 'Hingurakgoda'],
+    },
+  },
+  'Uva': {
+    'Badulla': {
+      'Badulla PS': ['Badulla', 'Haliela', 'Passara'],
+      'Bandarawela PS': ['Bandarawela', 'Diyatalawa', 'Ella'],
+    },
+    'Monaragala': {
+      'Monaragala PS': ['Monaragala', 'Buttala', 'Wellawaya'],
+    },
+  },
+  'Sabaragamuwa': {
+    'Ratnapura': {
+      'Ratnapura PS': ['Ratnapura', 'Kuruwita', 'Eheliyagoda'],
+      'Pelmadulla PS': ['Pelmadulla', 'Balangoda', 'Godakawela'],
+    },
+    'Kegalle': {
+      'Kegalle PS': ['Kegalle', 'Mawanella', 'Rambukkana'],
+      'Warakapola PS': ['Warakapola', 'Galigamuwa', 'Yatiyantota'],
+    },
+  },
+};
+
+List<String> getAllDistricts() {
+  final districts = <String>{};
+  for (final province in administrativeDataset.values) {
+    districts.addAll(province.keys);
+  }
+  final sortedDistricts = districts.toList()..sort();
+  sortedDistricts.add('Other');
+  return sortedDistricts;
+}
+
 class ServiceType {
   final String name;
   final String description;
@@ -105,14 +235,7 @@ final Map<String, ServiceType> serviceCatalog = {
         hint: 'Select district',
         type: 'dropdown',
         required: true,
-        options: [
-          'Colombo',
-          'Kandy',
-          'Matara',
-          'Galle',
-          'Anuradhapura',
-          'Other',
-        ],
+        options: getAllDistricts(),
       ),
       ServiceFormField(
         id: 'copies',
@@ -198,7 +321,7 @@ final Map<String, ServiceType> serviceCatalog = {
         hint: 'Select location',
         type: 'dropdown',
         required: true,
-        options: ['Colombo', 'Kandy', 'Galle', 'Matara', 'Other'],
+        options: getAllDistricts(),
       ),
     ],
   ),
