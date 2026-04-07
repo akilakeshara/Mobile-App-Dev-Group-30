@@ -17,6 +17,7 @@ import EscalatedComplaints from './EscalatedComplaints';
 import SystemSettings from './SystemSettings';
 import ServiceApplications from './ServiceApplications';
 import Payments from './Payments';
+import { generateAdminReport } from './utils/pdfGenerator';
 
 import { auth, db } from './firebase';
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth';
@@ -57,6 +58,7 @@ const Layout = () => {
   const [password, setPassword] = React.useState('');
   const [authError, setAuthError] = React.useState('');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [pdfLoading, setPdfLoading] = React.useState(false);
   const [notifications, setNotifications] = React.useState([]);
   const [showNotifications, setShowNotifications] = React.useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
@@ -277,8 +279,13 @@ const Layout = () => {
                 <Globe size={14} /> 
                 {i18n.language === 'ta' ? 'தமிழ்' : i18n.language === 'si' ? 'සිංහල' : 'English'}
               </button>
-            <button className="hide-on-mobile" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--primary)', border: '1px solid var(--primary)', padding: '0.4rem 0.8rem', borderRadius: '8px', cursor: 'pointer', background: 'transparent' }} onClick={() => window.print()}>
-               <FileText size={16} /> {t("Export PDF")}
+            <button 
+              className="hide-on-mobile" 
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--primary)', border: '1px solid var(--primary)', padding: '0.4rem 0.8rem', borderRadius: '8px', cursor: pdfLoading ? 'not-allowed' : 'pointer', background: 'transparent', opacity: pdfLoading ? 0.7 : 1 }} 
+              onClick={() => generateAdminReport(adminProfile, setPdfLoading)}
+              disabled={pdfLoading}
+            >
+               <FileText size={16} /> {pdfLoading ? t("Generating...") : t("Export PDF")}
             </button>
             <button 
               onClick={() => setShowNotifications(!showNotifications)}
