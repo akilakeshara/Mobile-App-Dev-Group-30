@@ -8,6 +8,12 @@ export default function Payments({ adminProfile }) {
   const [payments, setPayments] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   useEffect(() => {
     // Fetch applications which acts as our payment ledger for now
@@ -58,6 +64,11 @@ export default function Payments({ adminProfile }) {
   const totalRevenue = payments.filter(p => p.status === 'Successful').reduce((acc, curr) => acc + curr.amount, 0);
   const pendingRevenue = payments.filter(p => p.status === 'Pending').reduce((acc, curr) => acc + curr.amount, 0);
   const successCount = payments.filter(p => p.status === 'Successful').length;
+
+  const totalPages = Math.ceil(filteredPayments.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredPayments.slice(indexOfFirstItem, indexOfLastItem);
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
@@ -142,13 +153,13 @@ export default function Payments({ adminProfile }) {
                     <div className="animate-pulse">Retrieving ledger...</div>
                   </td>
                 </tr>
-              ) : filteredPayments.length === 0 ? (
+              ) : currentItems.length === 0 ? (
                 <tr>
                   <td colSpan="6" style={{ padding: '4rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                     No transactions match your criteria.
                   </td>
                 </tr>
-              ) : filteredPayments.map((p) => {
+              ) : currentItems.map((p) => {
                 let badgeColor = '#dcfce7'; let badgeText = '#166534';
                 if (p.status === 'Pending') { badgeColor = '#fef3c7'; badgeText = '#92400e'; }
                 if (p.status === 'Refunded/Failed') { badgeColor = '#fee2e2'; badgeText = '#991b1b'; }
@@ -185,6 +196,48 @@ export default function Payments({ adminProfile }) {
               })}
             </tbody>
           </table>
+        </div>
+        
+        <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'var(--surface)' }}>
+          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+            Showing {filteredPayments.length === 0 ? 0 : indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredPayments.length)} of {filteredPayments.length} entries
+          </span>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button 
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              style={{ padding: '0.4rem 0.8rem', borderRadius: '6px', border: '1px solid var(--border)', background: currentPage === 1 ? 'var(--bg-color)' : 'white', color: currentPage === 1 ? 'var(--text-muted)' : 'var(--text-main)', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', fontSize: '0.85rem', fontWeight: 600 }}
+            >
+              Previous
+            </button>
+            
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+              <button 
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                style={{ 
+                  padding: '0.4rem 0.8rem', 
+                  borderRadius: '6px', 
+                  border: currentPage === page ? '1px solid var(--primary)' : '1px solid var(--border)', 
+                  background: currentPage === page ? 'var(--primary)' : 'white', 
+                  color: currentPage === page ? 'white' : 'var(--text-main)', 
+                  cursor: 'pointer', 
+                  fontSize: '0.85rem', 
+                  fontWeight: 600 
+                }}
+              >
+                {page}
+              </button>
+            ))}
+
+            <button 
+              disabled={currentPage === totalPages || totalPages === 0}
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              style={{ padding: '0.4rem 0.8rem', borderRadius: '6px', border: '1px solid var(--border)', background: currentPage === totalPages || totalPages === 0 ? 'var(--bg-color)' : 'white', color: currentPage === totalPages || totalPages === 0 ? 'var(--text-muted)' : 'var(--text-main)', cursor: currentPage === totalPages || totalPages === 0 ? 'not-allowed' : 'pointer', fontSize: '0.85rem', fontWeight: 600 }}
+            >
+              Next
+            </button>
+          </div>
         </div>
       </div>
     </motion.div>

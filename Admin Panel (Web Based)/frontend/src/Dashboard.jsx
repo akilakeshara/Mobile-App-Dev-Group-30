@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { 
   Users, MapPin, Activity, Clock, ShieldCheck, 
   FileText, AlertTriangle, ArrowUpRight, ArrowDownRight, 
-  CalendarDays, CheckCircle2, LayoutGrid, Search
+  CalendarDays, CheckCircle2, LayoutGrid, Search, Coins, TrendingUp
 } from 'lucide-react';
 import { db } from './firebase';
 import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
@@ -58,6 +58,7 @@ export default function Dashboard({ adminProfile }) {
     officers: 0,
     applications: 0,
     complaints: 0,
+    revenue: 0,
   });
   const [recentApps, setRecentApps] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -135,9 +136,18 @@ export default function Dashboard({ adminProfile }) {
           status: data.status || 'Pending Review',
           userId: data.userId || '',
           gnDivision: data.gnDivision || '',
-          rawString: JSON.stringify(data).toLowerCase()
+          rawString: JSON.stringify(data).toLowerCase(),
+          paid: data.paid || false,
+          paymentAmount: data.paymentAmount || 0
         });
       });
+
+      // We should calculate revenue for dashboard stats.
+      let rev = 0;
+      list.forEach(app => {
+        if (app.paid && app.paymentAmount) rev += app.paymentAmount;
+      });
+      setStats(s => ({ ...s, revenue: rev }));
 
       setRecentApps(list);
       setLoading(false);
@@ -297,6 +307,25 @@ export default function Dashboard({ adminProfile }) {
           initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.6, duration: 0.6 }}
           style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}
         >
+          {/* Finance Wallet Card */}
+          <div className="glass" style={{ padding: '2rem', borderRadius: '24px', background: 'linear-gradient(135deg, #8b5cf6, #6d28d9)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 20px 40px -10px rgba(139, 92, 246, 0.4)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ padding: '10px', background: 'rgba(255,255,255,0.2)', borderRadius: '12px' }}>
+                <Coins size={24} color="white" />
+              </div>
+              <span style={{ background: 'rgba(0,0,0,0.2)', padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700 }}>LIVE</span>
+            </div>
+            <div style={{ marginTop: '1.5rem' }}>
+              <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600 }}>Total Revenue</p>
+              <h2 style={{ fontSize: '2.4rem', fontWeight: 800, margin: '0.2rem 0', letterSpacing: '-1px' }}>
+                 <span style={{ fontSize: '1.4rem', opacity: 0.8, marginRight: '4px' }}>Rs.</span>{stats.revenue.toFixed(2)}
+              </h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: '#dcfce7', marginTop: '0.5rem' }}>
+                <TrendingUp size={16} /> Successful payments synced
+              </div>
+            </div>
+          </div>
+
           <div className="glass" style={{ padding: '2rem', borderRadius: '24px', background: 'linear-gradient(to bottom, #fff, #f8fafc)', border: '1px solid rgba(0,0,0,0.05)', boxShadow: '0 10px 30px -10px rgba(0, 0, 0, 0.05)' }}>
             <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: 'rgba(10, 102, 194, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem' }}>
                <LayoutGrid size={24} color="var(--primary)" />

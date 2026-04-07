@@ -153,26 +153,32 @@ button {
 /* Layout Utilities */
 .app-container {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .sidebar {
   width: 280px;
+  min-width: 280px;
+  flex-shrink: 0;
   background-color: var(--surface);
   border-right: 1px solid var(--border);
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
 }
 
 .main-content {
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .topbar {
   height: 70px;
+  flex-shrink: 0;
   background-color: var(--surface);
   border-bottom: 1px solid var(--border);
   display: flex;
@@ -185,6 +191,7 @@ button {
   padding: 2rem;
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* Base Responsive Utilities */
