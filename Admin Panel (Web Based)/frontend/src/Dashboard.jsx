@@ -52,7 +52,10 @@ const normalize = (s) => (s || '').toLowerCase()
   .replace(/[^a-z0-9]/g, '')
   .trim();
 
+import { useTranslation } from 'react-i18next';
+
 export default function Dashboard({ adminProfile }) {
+  const { t } = useTranslation();
   const [stats, setStats] = useState({
     citizens: 0,
     officers: 0,
@@ -66,10 +69,10 @@ export default function Dashboard({ adminProfile }) {
 
   useEffect(() => {
     const hour = new Date().getHours();
-    if (hour < 12) setGreeting('Good Morning');
-    else if (hour < 18) setGreeting('Good Afternoon');
-    else setGreeting('Good Evening');
-  }, []);
+    if (hour < 12) setGreeting(t('Good Morning'));
+    else if (hour < 18) setGreeting(t('Good Afternoon'));
+    else setGreeting(t('Good Evening'));
+  }, [t]);
 
   useEffect(() => {
     if (!adminProfile) return;
@@ -215,23 +218,23 @@ export default function Dashboard({ adminProfile }) {
         
         <div style={{ position: 'relative', zIndex: 1 }}>
           <span style={{ fontSize: '0.9rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.8, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <ShieldCheck size={16} /> Divisional Secretariat Portal
+            <ShieldCheck size={16} /> {t('Divisional Secretariat Portal')}
           </span>
           <h1 style={{ fontSize: '2.8rem', fontWeight: 800, margin: '0.5rem 0 1rem 0', letterSpacing: '-1px' }}>
-            {greeting}, Admin!
+            {greeting}, {t('Admin')}!
           </h1>
           <p style={{ fontSize: '1.1rem', opacity: 0.9, maxWidth: '600px', lineHeight: 1.5 }}>
-            You are viewing the real-time command center for the <strong>{adminProfile?.dsDivision || 'assigned'}</strong> division. Monitor citizen requests, officer availability, and active escalations securely.
+            {t('You are viewing the real-time command center for the')} <strong>{adminProfile?.dsDivision || 'assigned'}</strong> {t('division. Monitor citizen requests, officer availability, and active escalations securely.')}
           </p>
         </div>
       </motion.div>
 
       {/* Modern Bento Box Metrics */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem' }}>
-        <MetricCard delay={0.1} title="Verified Citizens" value={loading ? '-' : stats.citizens} subtitle="Registered profiles" icon={Users} color="#10b981" />
-        <MetricCard delay={0.2} title="Active GN Officers" value={loading ? '-' : stats.officers} subtitle="Assigned to division" icon={MapPin} color="#3b82f6" />
-        <MetricCard delay={0.3} title="Actionable Requests" value={loading ? '-' : filteredDashboardApps.count} subtitle="Pending DS approval" icon={FileText} color="#f59e0b" />
-        <MetricCard delay={0.4} title="Open Escalations" value={loading ? '-' : stats.complaints} subtitle="Requiring attention" icon={AlertTriangle} color="#ef4444" />
+        <MetricCard delay={0.1} title={t('Verified Citizens')} value={loading ? '-' : stats.citizens} subtitle={t('Registered profiles')} icon={Users} color="#10b981" />
+        <MetricCard delay={0.2} title={t('Active GN Officers')} value={loading ? '-' : stats.officers} subtitle={t('Assigned to division')} icon={MapPin} color="#3b82f6" />
+        <MetricCard delay={0.3} title={t('Actionable Requests')} value={loading ? '-' : filteredDashboardApps.count} subtitle={t('Pending DS approval')} icon={FileText} color="#f59e0b" />
+        <MetricCard delay={0.4} title={t('Open Escalations')} value={loading ? '-' : stats.complaints} subtitle={t('Requiring attention')} icon={AlertTriangle} color="#ef4444" />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem' }}>
@@ -244,33 +247,33 @@ export default function Dashboard({ adminProfile }) {
           <div style={{ padding: '1.5rem 2rem', borderBottom: '1px solid rgba(0,0,0,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.7)' }}>
             <div>
               <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Activity size={20} color="var(--primary)" /> Real-Time Service Queue
+                <Activity size={20} color="var(--primary)" /> {t('Real-Time Service Queue')}
               </h3>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '4px' }}>Latest applications submitted by citizens within your division</p>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '4px' }}>{t('Latest applications submitted by citizens within your division')}</p>
             </div>
           </div>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead>
               <tr style={{ backgroundColor: 'rgba(0,0,0,0.02)' }}>
-                <th style={{ padding: '1.2rem 2rem', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Service Type</th>
-                <th style={{ padding: '1.2rem 2rem', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Citizen Info</th>
-                <th style={{ padding: '1.2rem 2rem', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Submitted</th>
-                <th style={{ padding: '1.2rem 2rem', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Status</th>
+                <th style={{ padding: '1.2rem 2rem', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>{t('Service Type')}</th>
+                <th style={{ padding: '1.2rem 2rem', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>{t('Citizen Info')}</th>
+                <th style={{ padding: '1.2rem 2rem', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>{t('Submitted')}</th>
+                <th style={{ padding: '1.2rem 2rem', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>{t('Status')}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
                   <td colSpan="4" style={{ padding: '4rem', textAlign: 'center' }}>
-                    <div className="animate-pulse" style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Syncing Divisional Data...</div>
+                    <div className="animate-pulse" style={{ color: 'var(--text-muted)', fontWeight: 600 }}>{t('Syncing Divisional Data...')}</div>
                   </td>
                 </tr>
               ) : filteredDashboardApps.recent.length === 0 ? (
                 <tr>
                   <td colSpan="4" style={{ padding: '4rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                     <CheckCircle2 size={40} style={{ margin: '0 auto 10px auto', opacity: 0.5 }} />
-                    <p style={{ fontWeight: 600 }}>No pending requests.</p>
-                    <span style={{ fontSize: '0.85rem' }}>Your division's queue is completely clear!</span>
+                    <p style={{ fontWeight: 600 }}>{t('No pending requests.')}</p>
+                    <span style={{ fontSize: '0.85rem' }}>{t("Your division's queue is completely clear!")}</span>
                   </td>
                 </tr>
               ) : filteredDashboardApps.recent.map((req, i) => {
@@ -313,15 +316,15 @@ export default function Dashboard({ adminProfile }) {
               <div style={{ padding: '10px', background: 'rgba(255,255,255,0.2)', borderRadius: '12px' }}>
                 <Coins size={24} color="white" />
               </div>
-              <span style={{ background: 'rgba(0,0,0,0.2)', padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700 }}>LIVE</span>
+              <span style={{ background: 'rgba(0,0,0,0.2)', padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700 }}>{t('LIVE')}</span>
             </div>
             <div style={{ marginTop: '1.5rem' }}>
-              <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600 }}>Total Revenue</p>
+              <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600 }}>{t('Total Revenue')}</p>
               <h2 style={{ fontSize: '2.4rem', fontWeight: 800, margin: '0.2rem 0', letterSpacing: '-1px' }}>
                  <span style={{ fontSize: '1.4rem', opacity: 0.8, marginRight: '4px' }}>Rs.</span>{stats.revenue.toFixed(2)}
               </h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: '#dcfce7', marginTop: '0.5rem' }}>
-                <TrendingUp size={16} /> Successful payments synced
+                <TrendingUp size={16} /> {t('Successful payments synced')}
               </div>
             </div>
           </div>
@@ -330,16 +333,16 @@ export default function Dashboard({ adminProfile }) {
             <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: 'rgba(10, 102, 194, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem' }}>
                <LayoutGrid size={24} color="var(--primary)" />
             </div>
-            <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.5rem' }}>Quick Actions</h3>
+            <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.5rem' }}>{t('Quick Actions')}</h3>
             <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '1.5rem', lineHeight: 1.5 }}>
-              Rapidly navigate to frequently used administrative modules.
+              {t('Rapidly navigate to frequently used administrative modules.')}
             </p>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {[
-                { title: "Grama Niladhari Ops", icon: MapPin },
-                { title: "Review Escalations", icon: AlertTriangle },
-                { title: "Citizen Directory", icon: Users },
+                { title: t("Grama Niladhari Ops"), icon: MapPin },
+                { title: t("Review Escalations"), icon: AlertTriangle },
+                { title: t("Citizen Directory"), icon: Users },
               ].map((act, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '14px', border: '1px solid var(--border)', background: 'white', cursor: 'pointer', transition: 'all 0.2s' }} onMouseOver={e=>{e.currentTarget.style.borderColor='var(--primary)'; e.currentTarget.style.boxShadow='0 4px 12px rgba(10,102,194,0.1)';}} onMouseOut={e=>{e.currentTarget.style.borderColor='var(--border)'; e.currentTarget.style.boxShadow='none';}}>
                   <act.icon size={18} color="var(--primary)" />
@@ -353,15 +356,15 @@ export default function Dashboard({ adminProfile }) {
           <div className="glass" style={{ padding: '2rem', borderRadius: '24px', backgroundColor: '#1e293b', backgroundImage: 'radial-gradient(circle at top right, #334155, #0f172a)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.4)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
               <h3 style={{ fontSize: '1.2rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Activity size={18} color="#34d399" /> System Health
+                <Activity size={18} color="#34d399" /> {t('System Health')}
               </h3>
             </div>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>
-                  <span>DB Sync Status</span>
-                  <span style={{ color: '#34d399' }}>Connected</span>
+                  <span>{t('DB Sync Status')}</span>
+                  <span style={{ color: '#34d399' }}>{t('Connected')}</span>
                 </div>
                 <div style={{ height: '6px', width: '100%', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '10px', overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: '100%', backgroundColor: '#34d399', borderRadius: '10px' }} />
@@ -370,8 +373,8 @@ export default function Dashboard({ adminProfile }) {
               
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>
-                  <span>Division Load / Activity</span>
-                  <span>Moderate</span>
+                  <span>{t('Division Load / Activity')}</span>
+                  <span>{t('Moderate')}</span>
                 </div>
                 <div style={{ height: '6px', width: '100%', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '10px', overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: '65%', backgroundColor: '#60a5fa', borderRadius: '10px' }} />

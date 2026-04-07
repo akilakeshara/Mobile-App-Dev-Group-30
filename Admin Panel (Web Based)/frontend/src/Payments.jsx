@@ -3,8 +3,10 @@ import { motion } from 'framer-motion';
 import { Coins, Search, FileText, CheckCircle2, TrendingUp, CreditCard, Filter } from 'lucide-react';
 import { db } from './firebase';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { useTranslation } from 'react-i18next';
 
 export default function Payments({ adminProfile }) {
+  const { t } = useTranslation();
   const [payments, setPayments] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
@@ -76,10 +78,10 @@ export default function Payments({ adminProfile }) {
         <div>
           <h1 style={{ color: 'var(--text-main)', fontSize: '1.8rem', letterSpacing: '-0.5px', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Coins color="var(--primary)" size={28} />
-            Payments Hub
+            {t('Payments Hub')}
           </h1>
           <p style={{ color: 'var(--text-muted)', marginTop: '5px' }}>
-            Monitor and audit citizen service payments via PayHere Gateway.
+            {t('Monitor and audit citizen service payments via PayHere Gateway.')}
           </p>
         </div>
       </div>
@@ -90,7 +92,7 @@ export default function Payments({ adminProfile }) {
             <TrendingUp size={24} color="var(--primary)" />
           </div>
           <div>
-            <h3 style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Total Revenue</h3>
+            <h3 style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>{t('Total Revenue')}</h3>
             <p style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>Rs. {totalRevenue.toFixed(2)}</p>
           </div>
         </motion.div>
@@ -100,7 +102,7 @@ export default function Payments({ adminProfile }) {
             <CheckCircle2 size={24} color="#10b981" />
           </div>
           <div>
-            <h3 style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Success Txns</h3>
+            <h3 style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>{t('Success Txns')}</h3>
             <p style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>{successCount}</p>
           </div>
         </motion.div>
@@ -110,7 +112,7 @@ export default function Payments({ adminProfile }) {
             <CreditCard size={24} color="#f59e0b" />
           </div>
           <div>
-            <h3 style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Pending Holds</h3>
+            <h3 style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>{t('Pending Holds')}</h3>
             <p style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>Rs. {pendingRevenue.toFixed(2)}</p>
           </div>
         </motion.div>
@@ -130,7 +132,7 @@ export default function Payments({ adminProfile }) {
             />
           </div>
           <button style={{ background: 'transparent', border: '1px solid var(--border)', padding: '0 1rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, color: 'var(--text-main)' }}>
-            <Filter size={16} /> Filter
+            <Filter size={16} /> {t('Filter')}
           </button>
         </div>
 
@@ -138,25 +140,25 @@ export default function Payments({ adminProfile }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead style={{ backgroundColor: 'var(--primary-light)', color: 'var(--primary-dark)', fontSize: '0.85rem' }}>
               <tr>
-                <th style={{ padding: '1.2rem 1.5rem', fontWeight: '600' }}>Transaction Ref</th>
-                <th style={{ padding: '1.2rem 1.5rem', fontWeight: '600' }}>Service Type</th>
-                <th style={{ padding: '1.2rem 1.5rem', fontWeight: '600' }}>Applicant</th>
-                <th style={{ padding: '1.2rem 1.5rem', fontWeight: '600' }}>Date & Time</th>
-                <th style={{ padding: '1.2rem 1.5rem', fontWeight: '600' }}>Amount</th>
-                <th style={{ padding: '1.2rem 1.5rem', fontWeight: '600', textAlign: 'right' }}>Payment Status</th>
+                <th style={{ padding: '1.2rem 1.5rem', fontWeight: '600' }}>{t('Transaction Ref')}</th>
+                <th style={{ padding: '1.2rem 1.5rem', fontWeight: '600' }}>{t('Service Type')}</th>
+                <th style={{ padding: '1.2rem 1.5rem', fontWeight: '600' }}>{t('Applicant')}</th>
+                <th style={{ padding: '1.2rem 1.5rem', fontWeight: '600' }}>{t('Date & Time')}</th>
+                <th style={{ padding: '1.2rem 1.5rem', fontWeight: '600' }}>{t('Amount')}</th>
+                <th style={{ padding: '1.2rem 1.5rem', fontWeight: '600', textAlign: 'right' }}>{t('Payment Status')}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
                   <td colSpan="6" style={{ padding: '4rem', textAlign: 'center' }}>
-                    <div className="animate-pulse">Retrieving ledger...</div>
+                    <div className="animate-pulse">{t('Retrieving ledger...')}</div>
                   </td>
                 </tr>
               ) : currentItems.length === 0 ? (
                 <tr>
                   <td colSpan="6" style={{ padding: '4rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                    No transactions match your criteria.
+                    {t('No transactions match your criteria.')}
                   </td>
                 </tr>
               ) : currentItems.map((p) => {
@@ -200,7 +202,7 @@ export default function Payments({ adminProfile }) {
         
         <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'var(--surface)' }}>
           <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-            Showing {filteredPayments.length === 0 ? 0 : indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredPayments.length)} of {filteredPayments.length} entries
+            {t('Showing')} {filteredPayments.length === 0 ? 0 : indexOfFirstItem + 1} {t('to')} {Math.min(indexOfLastItem, filteredPayments.length)} {t('of')} {filteredPayments.length} {t('entries')}
           </span>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button 
@@ -208,7 +210,7 @@ export default function Payments({ adminProfile }) {
               onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
               style={{ padding: '0.4rem 0.8rem', borderRadius: '6px', border: '1px solid var(--border)', background: currentPage === 1 ? 'var(--bg-color)' : 'white', color: currentPage === 1 ? 'var(--text-muted)' : 'var(--text-main)', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', fontSize: '0.85rem', fontWeight: 600 }}
             >
-              Previous
+              {t('Previous')}
             </button>
             
             {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
@@ -235,7 +237,7 @@ export default function Payments({ adminProfile }) {
               onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
               style={{ padding: '0.4rem 0.8rem', borderRadius: '6px', border: '1px solid var(--border)', background: currentPage === totalPages || totalPages === 0 ? 'var(--bg-color)' : 'white', color: currentPage === totalPages || totalPages === 0 ? 'var(--text-muted)' : 'var(--text-main)', cursor: currentPage === totalPages || totalPages === 0 ? 'not-allowed' : 'pointer', fontSize: '0.85rem', fontWeight: 600 }}
             >
-              Next
+              {t('Next')}
             </button>
           </div>
         </div>

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { 
   LayoutDashboard, Users, Settings, LogOut, FileText, 
   Coins, MapPin, AlertOctagon, TrendingUp, Search, Bell, 
-  ChevronRight, Calendar, UserCheck, ShieldCheck, FileSignature, Lock, Truck, Menu 
+  ChevronRight, Calendar, UserCheck, ShieldCheck, FileSignature, Lock, Truck, Menu, Globe
 } from 'lucide-react';
 /* eslint-disable no-unused-vars */
 import { motion, AnimatePresence } from 'framer-motion';
@@ -146,7 +146,9 @@ const Layout = () => {
   ];
 
   const toggleLanguage = () => {
-    const newLang = i18n.language === 'en' ? 'si' : 'en';
+    let newLang = 'en';
+    if (i18n.language === 'en') newLang = 'si';
+    else if (i18n.language === 'si') newLang = 'ta';
     i18n.changeLanguage(newLang);
   };
 
@@ -271,9 +273,10 @@ const Layout = () => {
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', position: 'relative' }}>
-            <button className="hide-on-mobile" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', border: '1px solid var(--border)', padding: '0.4rem 0.8rem', borderRadius: '8px', cursor: 'pointer', background: 'transparent' }} onClick={toggleLanguage}>
-               {i18n.language === 'en' ? 'සිංහල' : 'English'}
-            </button>
+              <button onClick={toggleLanguage} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600, padding: '6px 12px', border: '1px solid var(--border)', borderRadius: '20px', backgroundColor: 'var(--bg-color)', color: 'var(--text-main)' }}>
+                <Globe size={14} /> 
+                {i18n.language === 'ta' ? 'தமிழ்' : i18n.language === 'si' ? 'සිංහල' : 'English'}
+              </button>
             <button className="hide-on-mobile" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--primary)', border: '1px solid var(--primary)', padding: '0.4rem 0.8rem', borderRadius: '8px', cursor: 'pointer', background: 'transparent' }} onClick={() => window.print()}>
                <FileText size={16} /> {t("Export PDF")}
             </button>
