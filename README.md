@@ -72,12 +72,18 @@ npm run dev
 ## 👥 Contributors
 
 This project was developed by a team of 6 engineers:
-- **Core Citizen Identity & Security** (Auth, AES Encryption)
-- **Public Service Engine** (Applications, Payments, Blob Storage)
-- **GN Officer RBAC Routing** (Navigations, Web Setup, Dashboards)
-- **Backend Utilities & Workflows** (Offline Sync, AI Chatbot, Backend Logic)
-- **Public Hazard & Escalation System** (Complaints, Notifications)
-- **DS Admin Overlord & Civic Directories** (React Architecture, CSS Branding)
+
+- **Member 1 (KESHARA BHA):** Was primarily responsible for Core Citizen Identity & Cryptographic Security. This involved Authentication, Encryption, Registration, and Localization Services. They developed the AES encryption utilities, multi-lingual authentication flow, OTP services, and managed citizen models, while also securing the backend with Firestore security integrations and legacy user migrations.
+
+- **Member 2 (HIRUSHIKA):** Engineered the Public Service Engine, Payments & Application Verification. They focused on Service Data Structuring, Storage Integrations, Payments, and Form UI. Key contributions included building the citizen application modules, setting up the payment checkout page, integrating Firebase blob storage, and architecting the certificate wallet and verification workflows across mobile and web interfaces.
+
+- **Member 3 (CHAMODMA):** Directed the GN Officer RBAC Routing, Navigations & Dashboards. Their core focus was Access Control, Component Routing, Policy Utilities, and Officer Integrations. They implemented role-based access control, developed the global navigations and bottom nav, mapped the web routing SPA, and structured the GN Officer dashboard architecture along with appointment systems.
+
+- **Member 4 (SAYURI):** Managed Interoperable Backend Utilities & System Workflows. They were responsible for System sync algorithms, Offline Capabilities, AI Integrations, and Backend Systems Frameworks. They developed the AI chatbot views, implemented offline sync queue services for resilience, handled document verification mutators, setup core `firestore_service`, and formulated the web-based `SystemSettings` interfaces.
+
+- **Member 5 (NAVODA):** Constructed the Public Hazard & Escalation Framework. They handled Hazard Data Modelling, Citizen Complaints, Admin Web Escalation Syncing, and Push Notifications. They established the public hazard reporting modules natively, integrated Firebase push notification handlers, and built the React Web monitoring views (`EscalatedComplaints.jsx`) to sync escalated issues to DS Admins.
+
+- **Member 6 (IMANSHA AGK):** Orchestrated the DS Admin Overlord, Civic Directories & Core Configurations. They focused on Web Dashboard Architecture, Project Environments, CSS Branding, and Waste Syncing. They mapped core CSS and thematic design systems, configured Vite/ESLint development environments, developed robust statistical dashboards (`Dashboard.jsx`), managed `CivilRegistrations`, and built the `WasteSchedule` infrastructure on both web and mobile.
 
 ---
 
