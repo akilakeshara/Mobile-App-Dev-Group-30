@@ -7,6 +7,35 @@
 
 **GovEase** is a unified, cross-platform e-governance ecosystem designed to modernize civic operations in Sri Lanka. It bridges the gap between the public and government officials by digitizing public service requests, document verification, and complaint management.
 
+## 📸 Screenshots
+
+### 💻 Web Admin Dashboard (Multi-lingual)
+<div align="center">
+  <img src="assets/screenshots/admin_en.jpeg" alt="Admin Portal - English" width="32%"/>
+  <img src="assets/screenshots/admin_si.jpeg" alt="Admin Portal - Sinhala" width="32%"/>
+  <img src="assets/screenshots/admin_ta.jpeg" alt="Admin Portal - Tamil" width="32%"/>
+</div>
+
+### 📱 Mobile App (Citizen Dashboard)
+<div align="center">
+  <img src="assets/screenshots/Citizen%20App%20Dashboard_1.jpeg" alt="Citizen Dashboard 1" width="30%"/>
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="assets/screenshots/Citizen%20App%20Dashboard_2.jpeg" alt="Citizen Dashboard 2" width="30%"/>
+</div>
+
+### 📝 Service Application Submission Flow
+<div align="center">
+  <img src="assets/screenshots/Service%20Application%20Submission%20Flow/Submitting%20service%20application%20flow_1.jpeg" alt="Flow 1" width="23%"/>
+  <img src="assets/screenshots/Service%20Application%20Submission%20Flow/Submitting%20service%20application%20flow_2.jpeg" alt="Flow 2" width="23%"/>
+  <img src="assets/screenshots/Service%20Application%20Submission%20Flow/Submitting%20service%20application%20flow_3.jpeg" alt="Flow 3" width="23%"/>
+  <img src="assets/screenshots/Service%20Application%20Submission%20Flow/Submitting%20service%20application%20flow_4.jpeg" alt="Flow 4" width="23%"/>
+  <br>
+  <img src="assets/screenshots/Service%20Application%20Submission%20Flow/Submitting%20service%20application%20flow_5.jpeg" alt="Flow 5" width="23%"/>
+  <img src="assets/screenshots/Service%20Application%20Submission%20Flow/Submitting%20service%20application%20flow_6.jpeg" alt="Flow 6" width="23%"/>
+  <img src="assets/screenshots/Service%20Application%20Submission%20Flow/Submitting%20service%20application%20flow_7.jpeg" alt="Flow 7" width="23%"/>
+  <img src="assets/screenshots/Service%20Application%20Submission%20Flow/Submitting%20service%20application%20flow_8.jpeg" alt="Flow 8" width="23%"/>
+</div>
+
 ## 🌟 Key Features
 
 * **📱 Multi-Role Mobile App (Flutter):** A single app with dynamic routing for Citizens and Grama Niladhari (GN) Officers.
